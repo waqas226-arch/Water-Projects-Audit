@@ -1,0 +1,6 @@
+{
+  "name": "FGRF – Water Projects Audit & Monitoring System",
+  "description": "Online installation, functionality audit and corrective action management system for FGRF water projects across Pakistan.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
