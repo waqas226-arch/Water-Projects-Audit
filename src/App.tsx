@@ -42,6 +42,7 @@ import { SoftwareRightsModal } from './components/SoftwareRightsModal.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
 import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
+import { PublicAuditVerificationView } from './components/PublicAuditVerificationView.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
@@ -104,30 +105,7 @@ export default function App() {
     return cleanup;
   }, [currentUser.id]);
 
-  // Listen to ?view_audit= in URL for QR Code scan instant verification
-  useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetAuditId = urlParams.get('view_audit');
-      if (targetAuditId) {
-        const needle = targetAuditId.toLowerCase();
-        const found = audits.find((a) => a && a.id && a.id.toLowerCase() === needle);
-        if (found) {
-          setActivePrintAudit(found);
-        } else {
-          // Immediately fetch from cloud if not locally cached
-          fetchCloudData().then((cloud) => {
-            if (cloud && Array.isArray(cloud.audits)) {
-              const cloudFound = cloud.audits.find((a) => a && a.id && a.id.toLowerCase() === needle);
-              if (cloudFound) {
-                setActivePrintAudit(cloudFound);
-              }
-            }
-          });
-        }
-      }
-    } catch {}
-  }, [audits]);
+
 
   // Manual Trigger for Instant Cloud Sync
   const handleManualCloudSync = async () => {
@@ -334,6 +312,20 @@ export default function App() {
     setNotifications(updated);
     saveNotifications(updated);
   };
+
+  // Check if URL is in Public QR Verification Mode (e.g. ?view_audit=AUD-2026-0001)
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const publicAuditId = urlParams ? (urlParams.get('view_audit') || urlParams.get('verify')) : null;
+
+  // Standalone Public Verification: Show ONLY official inspection form & pictures/videos. Never access whole software.
+  if (publicAuditId) {
+    return (
+      <PublicAuditVerificationView
+        auditId={publicAuditId}
+        audits={audits}
+      />
+    );
+  }
 
   // Before displaying software, first display Log On User ID on right and FGRF Logo on left
   if (!isAuthenticated) {
