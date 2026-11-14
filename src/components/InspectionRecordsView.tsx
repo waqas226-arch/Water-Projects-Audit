@@ -9,6 +9,7 @@ import {
   Eye, 
   Sparkles, 
   Camera, 
+  Video,
   MapPin, 
   User, 
   Calendar,
@@ -17,7 +18,8 @@ import {
   ThumbsDown,
   X,
   QrCode,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { AuditRecord, InspectionApprovalStatus, UserProfile } from '../types/index.ts';
 import { filterRecordsByJurisdiction } from '../utils/auditLogic.ts';
@@ -399,14 +401,14 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
         </div>
       )}
 
-      {/* QR Code Verification Modal */}
+      {/* QR Code Verification & Completed Media Preview Modal */}
       {selectedQrAudit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4 border-2 border-emerald-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center space-y-4 border-2 border-emerald-500 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="font-bold text-xs uppercase text-slate-800 flex items-center gap-1.5">
                 <QrCode className="w-4 h-4 text-emerald-600" />
-                <span>Verification QR Code</span>
+                <span>Verification QR Code & Field Media</span>
               </span>
               <button onClick={() => setSelectedQrAudit(null)} className="p-1 text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
@@ -416,20 +418,24 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
               <div className="font-mono font-black text-lg text-emerald-950">{selectedQrAudit.id}</div>
               <div className="text-xs text-slate-600 mt-0.5">
-                {selectedQrAudit.projectId} • {selectedQrAudit.district}
+                Project: <strong>{selectedQrAudit.projectId}</strong> • {selectedQrAudit.district} ({selectedQrAudit.tehsil})
               </div>
-              <div className="text-[11px] font-semibold text-emerald-800">
-                Condition: {selectedQrAudit.overallCondition}
+              <div className="text-[11px] font-semibold text-emerald-800 mt-1">
+                Condition: <span className="bg-emerald-100 px-2 py-0.5 rounded-full">{selectedQrAudit.overallCondition}</span>
               </div>
             </div>
 
+            {/* QR Code Image */}
             {selectedQrAudit.qrCodeDataUrl ? (
               <div className="p-2 bg-white rounded-xl border-2 border-dashed border-emerald-400 inline-block shadow-sm">
                 <img
                   src={selectedQrAudit.qrCodeDataUrl}
                   alt="Audit QR"
-                  className="w-48 h-48 mx-auto object-contain rounded-lg"
+                  className="w-40 h-40 mx-auto object-contain rounded-lg"
                 />
+                <div className="text-[10px] text-slate-500 font-mono mt-1">
+                  Scan to verify inspection record authenticity
+                </div>
               </div>
             ) : (
               <div className="p-6 bg-slate-50 rounded-xl text-xs text-slate-400">
@@ -437,15 +443,62 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
               </div>
             )}
 
-            <div className="pt-2">
+            {/* Attached Media Previews */}
+            <div className="text-left bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+              <div className="text-[11px] font-bold text-slate-700 uppercase flex items-center justify-between">
+                <span>Attached Media Evidence</span>
+                <span className="font-urdu text-slate-500 text-[10px]">منسلک تصاویر و ویڈیوز</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Overview:</span>
+                  {selectedQrAudit.attachedPhotos?.siteOverview ? (
+                    <img src={selectedQrAudit.attachedPhotos.siteOverview} alt="Overview" className="w-full h-14 object-cover rounded border" />
+                  ) : (
+                    <div className="h-14 bg-slate-200 rounded border border-dashed flex items-center justify-center text-[9px] text-slate-400">None</div>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Before Defect:</span>
+                  {selectedQrAudit.attachedPhotos?.beforeDefect ? (
+                    <img src={selectedQrAudit.attachedPhotos.beforeDefect} alt="Before" className="w-full h-14 object-cover rounded border" />
+                  ) : (
+                    <div className="h-14 bg-slate-200 rounded border border-dashed flex items-center justify-center text-[9px] text-slate-400">None</div>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">After Repair:</span>
+                  {selectedQrAudit.attachedPhotos?.afterRepair ? (
+                    <img src={selectedQrAudit.attachedPhotos.afterRepair} alt="After" className="w-full h-14 object-cover rounded border" />
+                  ) : (
+                    <div className="h-14 bg-slate-200 rounded border border-dashed flex items-center justify-center text-[9px] text-slate-400">None</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const audit = selectedQrAudit;
+                  setSelectedQrAudit(null);
+                  onViewPrintableForm(audit);
+                }}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>View Full Official Certificate & All Media</span>
+              </button>
+
               {selectedQrAudit.qrCodeDataUrl && (
                 <a
                   href={selectedQrAudit.qrCodeDataUrl}
                   download={`FGRF_Water_Audit_QR_${selectedQrAudit.id}.png`}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs"
+                  className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer block"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Download QR Code (.png)</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download QR Code Image (.png)</span>
                 </a>
               )}
             </div>

@@ -84,6 +84,10 @@ export interface RepairItem {
   completionRemarks?: string;
   beforePhoto?: string;
   afterPhoto?: string;
+  repairPhoto?: string;
+  repairVideo?: string;
+  beforeVideo?: string;
+  afterVideo?: string;
   completedDate?: string;
 }
 
@@ -134,6 +138,11 @@ export interface AuditRecord {
     beforeDefect?: string;
     afterRepair?: string;
     siteOverview?: string;
+    beforeVideo?: string;
+    afterVideo?: string;
+    siteVideo?: string;
+    repairPhotos?: string[];
+    repairVideos?: string[];
   };
   inspectorRemarks: string;
   inspectorSignature: string; // base64 data URL

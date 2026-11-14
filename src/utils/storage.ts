@@ -274,6 +274,11 @@ export function submitNewAudit(audit: AuditRecord): { audit: AuditRecord; update
   }
   saveProjects(projects);
 
+  // Automatically publish to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then(cs => {
+    cs.publishAuditToCloud(audit, updatedProject, audit.repairs || [], audit.inspectorId || 'inspector');
+  }).catch(() => {});
+
   // Add notification
   const notifs = getNotifications();
   notifs.unshift({
@@ -303,6 +308,11 @@ export function updateProject(updatedProject: WaterProject): WaterProject[] {
     projects.unshift(updatedProject);
   }
   saveProjects(projects);
+
+  // Automatically publish to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then(cs => {
+    cs.pushLocalToCloud(getAudits(), projects, getRepairs());
+  }).catch(() => {});
   return projects;
 }
 
@@ -310,6 +320,11 @@ export function deleteProject(projectId: string): WaterProject[] {
   const projects = getProjects();
   const filtered = projects.filter((p) => p.id !== projectId);
   saveProjects(filtered);
+
+  // Automatically publish to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then(cs => {
+    cs.pushLocalToCloud(getAudits(), filtered, getRepairs());
+  }).catch(() => {});
   return filtered;
 }
 

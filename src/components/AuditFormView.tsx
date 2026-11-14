@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Camera, 
+  Video,
+  Play,
+  Film,
   AlertTriangle, 
   Plus, 
   Trash2, 
@@ -20,7 +23,9 @@ import {
   RefreshCw,
   Download,
   Printer,
-  Sparkles
+  Sparkles,
+  ExternalLink,
+  Image as ImageIcon
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { 
@@ -64,6 +69,7 @@ interface AuditFormViewProps {
   onSubmitAudit: (audit: AuditRecord) => void;
   preselectedProjectId?: string;
   onCancel?: () => void;
+  onViewAuditCertificate?: (audit: AuditRecord) => void;
 }
 
 export const AuditFormView: React.FC<AuditFormViewProps> = ({
@@ -72,6 +78,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   onSubmitAudit,
   preselectedProjectId,
   onCancel,
+  onViewAuditCertificate,
 }) => {
   // Pre-fill if a project is selected
   const initialProject = preselectedProjectId
@@ -175,8 +182,11 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
     (masterHeads.conditions[0]?.id as OverallCondition) || 'Functional'
   );
   const [photoSiteOverview, setPhotoSiteOverview] = useState<string>('');
+  const [videoSiteOverview, setVideoSiteOverview] = useState<string>('');
   const [photoBeforeDefect, setPhotoBeforeDefect] = useState<string>('');
+  const [videoBeforeDefect, setVideoBeforeDefect] = useState<string>('');
   const [photoAfterRepair, setPhotoAfterRepair] = useState<string>('');
+  const [videoAfterRepair, setVideoAfterRepair] = useState<string>('');
   const [inspectorRemarks, setInspectorRemarks] = useState('');
   const [inspectorSignature, setInspectorSignature] = useState('');
   const [inspectionSignDate, setInspectionSignDate] = useState(new Date().toISOString().slice(0, 10));
@@ -349,6 +359,8 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
       responsiblePerson: 'Regional Maintenance Team',
       targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       status: 'Pending',
+      repairPhoto: '',
+      repairVideo: '',
     };
     setRepairs((prev) => [...prev, newRepair]);
   };
@@ -365,13 +377,63 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
     });
   };
 
-  // Image upload simulator with file reader
-  const handleImageUpload = (
+  // High-Definition Canvas-Based Image Compressor (resizes to max 1280px to save storage & ensure fast sync)
+  const handleCompressedImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     setter: (dataUrl: string) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 1280;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          setter(compressed);
+        } else {
+          setter(event.target?.result as string);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Video Upload Handler with size validation
+  const handleVideoUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (dataUrl: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Video file is larger than 25MB. Please choose or record a shorter clip (under 25MB) for fast real-time cloud synchronization.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -402,22 +464,15 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   const handleFinalSubmit = async () => {
     setIsGeneratingQr(true);
     const auditId = inspectionCode;
-    const qrPayload = JSON.stringify({
-      verification: 'Faizan Global Relief Foundation (FGRF) - Water Audit Certification',
-      inspectionCode: auditId,
-      projectId: projectId.trim().toUpperCase(),
-      location: `${village}, ${tehsil}, ${district}, ${province}`,
-      installationType,
-      evaluatedCondition: overallCondition,
-      inspector: `${inspectorName} (${currentUser.id})`,
-      date: inspectionDateTime.slice(0, 10),
-      formReference: OFFICIAL_FORM_REFERENCE,
-      authenticatedBy: 'Data Management & ERP Department - FGRF • Syed Waqas, Manager MIS'
-    }, null, 2);
+    
+    // Live Cloud Verification URL encoded into QR Code
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const verificationUrl = `${origin}${pathname}?view_audit=${auditId}`;
 
     let qrCodeDataUrl = '';
     try {
-      qrCodeDataUrl = await QRCode.toDataURL(qrPayload, {
+      qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
         width: 320,
         margin: 2,
         color: {
@@ -456,8 +511,11 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
       qrCodeDataUrl,
       attachedPhotos: {
         siteOverview: photoSiteOverview || undefined,
+        siteVideo: videoSiteOverview || undefined,
         beforeDefect: photoBeforeDefect || undefined,
+        beforeVideo: videoBeforeDefect || undefined,
         afterRepair: photoAfterRepair || undefined,
+        afterVideo: videoAfterRepair || undefined,
       },
       inspectorRemarks,
       inspectorSignature,
@@ -1238,6 +1296,85 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                       </select>
                     </div>
                   </div>
+
+                  {/* Repair Photo & Video Evidence Row */}
+                  <div className="bg-white/90 p-3 rounded-xl border border-amber-200/90 space-y-2 mt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-amber-600" />
+                        Repair Photo & Video Evidence / مرمتی تصویری اور ویڈیو ثبوت
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-urdu">مرمت / خرابی کی تصویر اور ویڈیو یہاں اپلوڈ کریں</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Repair Photo */}
+                      <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/80">
+                        <div className="text-[11px] font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>Repair Photo / مرمتی تصویر</span>
+                          {rep.repairPhoto && <span className="text-emerald-700 text-[10px] font-bold bg-emerald-100 px-1.5 py-0.5 rounded">Photo Attached ✓</span>}
+                        </div>
+                        {rep.repairPhoto ? (
+                          <div className="relative rounded-lg overflow-hidden border border-slate-300 shadow-2xs">
+                            <img src={rep.repairPhoto} alt="Repair Evidence" className="w-full h-28 object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateRepair(rIdx, 'repairPhoto', undefined)}
+                              className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700 transition-colors"
+                              title="Remove photo"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-full h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:bg-amber-50/30 bg-white transition-colors">
+                            <Camera className="w-5 h-5 text-slate-400 mb-1" />
+                            <span className="text-xs text-slate-700 font-semibold">Attach Repair Photo</span>
+                            <span className="font-urdu text-[10px] text-slate-400">تصویر منتخب کریں</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleCompressedImageUpload(e, (data) => handleUpdateRepair(rIdx, 'repairPhoto', data))}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Repair Video */}
+                      <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/80">
+                        <div className="text-[11px] font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>Repair Video / مرمتی ویڈیو</span>
+                          {rep.repairVideo && <span className="text-emerald-700 text-[10px] font-bold bg-emerald-100 px-1.5 py-0.5 rounded">Video Attached ✓</span>}
+                        </div>
+                        {rep.repairVideo ? (
+                          <div className="relative rounded-lg overflow-hidden border border-slate-300 bg-black shadow-2xs">
+                            <video src={rep.repairVideo} controls className="w-full h-28 object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateRepair(rIdx, 'repairVideo', undefined)}
+                              className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700 transition-colors z-10"
+                              title="Remove video"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-full h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:bg-amber-50/30 bg-white transition-colors">
+                            <Video className="w-5 h-5 text-slate-400 mb-1" />
+                            <span className="text-xs text-slate-700 font-semibold">Attach Repair Video</span>
+                            <span className="font-urdu text-[10px] text-slate-400">ویڈیو منتخب کریں</span>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => handleVideoUpload(e, (data) => handleUpdateRepair(rIdx, 'repairVideo', data))}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1297,102 +1434,231 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
             </div>
           </div>
 
-          {/* Photograph Uploads */}
+          {/* On-Site Photographs & Videos Uploads */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-emerald-600" />
-                Photographs Attached / منسلک تصاویر
+                <span>On-Site Media (Photos & Videos) / موقع پر لی گئی تصاویر اور ویڈیوز</span>
               </label>
-              <span className="text-xs text-slate-500">Camera or Image Upload</span>
+              <span className="text-[11px] text-emerald-800 font-semibold font-urdu">تصاویر اور ویڈیوز برائے تصدیق</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Site Overview */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
-                <div className="text-xs font-bold text-slate-700 mb-1">1. Site Overview / مقام کی تصویر</div>
-                {photoSiteOverview ? (
-                  <div className="relative rounded-lg overflow-hidden border border-slate-300">
-                    <img src={photoSiteOverview} alt="Overview" className="w-full h-32 object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setPhotoSiteOverview('')}
-                      className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full text-xs"
-                    >
-                      ×
-                    </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 1. Site Overview */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                  <div className="text-xs font-bold text-slate-800">1. Site Overview / پورے مقام کا منظر</div>
+                  <span className="text-[10px] font-urdu text-emerald-800 font-semibold">پورا منظر</span>
+                </div>
+
+                {/* Photo */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>Overview Photo / تصویر</span>
+                    {photoSiteOverview && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Photo Added ✓</span>}
                   </div>
-                ) : (
-                  <label className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-colors bg-white">
-                    <Camera className="w-6 h-6 text-slate-400 mb-1" />
-                    <span className="text-xs text-slate-500">Attach Overview</span>
-                    <span className="font-urdu text-slate-400 text-xs">پورا منظر</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, setPhotoSiteOverview)}
-                    />
-                  </label>
-                )}
+                  {photoSiteOverview ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 shadow-2xs">
+                      <img src={photoSiteOverview} alt="Overview" className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoSiteOverview('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700"
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors bg-white">
+                      <Camera className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach Overview Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleCompressedImageUpload(e, setPhotoSiteOverview)}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Video */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>Overview Video / ویڈیو</span>
+                    {videoSiteOverview && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Video Added ✓</span>}
+                  </div>
+                  {videoSiteOverview ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 bg-black shadow-2xs">
+                      <video src={videoSiteOverview} controls className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setVideoSiteOverview('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700 z-10"
+                        title="Remove video"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors bg-white">
+                      <Video className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach Overview Video</span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleVideoUpload(e, setVideoSiteOverview)}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
 
-              {/* Before / Defect */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
-                <div className="text-xs font-bold text-slate-700 mb-1">2. Before / Defect / خرابی سے پہلے</div>
-                {photoBeforeDefect ? (
-                  <div className="relative rounded-lg overflow-hidden border border-slate-300">
-                    <img src={photoBeforeDefect} alt="Defect" className="w-full h-32 object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setPhotoBeforeDefect('')}
-                      className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full text-xs"
-                    >
-                      ×
-                    </button>
+              {/* 2. Before / Defect */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                  <div className="text-xs font-bold text-slate-800">2. Before / Defect / خرابی سے پہلے</div>
+                  <span className="text-[10px] font-urdu text-amber-800 font-semibold">خرابی کی حالت</span>
+                </div>
+
+                {/* Photo */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>Defect Photo / تصویر</span>
+                    {photoBeforeDefect && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Photo Added ✓</span>}
                   </div>
-                ) : (
-                  <label className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-colors bg-white">
-                    <Camera className="w-6 h-6 text-slate-400 mb-1" />
-                    <span className="text-xs text-slate-500">Attach Defect Photo</span>
-                    <span className="font-urdu text-slate-400 text-xs">خرابی کی تصویر</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, setPhotoBeforeDefect)}
-                    />
-                  </label>
-                )}
+                  {photoBeforeDefect ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 shadow-2xs">
+                      <img src={photoBeforeDefect} alt="Defect" className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoBeforeDefect('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700"
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:bg-amber-50/30 transition-colors bg-white">
+                      <Camera className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach Defect Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleCompressedImageUpload(e, setPhotoBeforeDefect)}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Video */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>Defect Video / ویڈیو</span>
+                    {videoBeforeDefect && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Video Added ✓</span>}
+                  </div>
+                  {videoBeforeDefect ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 bg-black shadow-2xs">
+                      <video src={videoBeforeDefect} controls className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setVideoBeforeDefect('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700 z-10"
+                        title="Remove video"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:bg-amber-50/30 transition-colors bg-white">
+                      <Video className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach Defect Video</span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleVideoUpload(e, setVideoBeforeDefect)}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
 
-              {/* After Repair */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
-                <div className="text-xs font-bold text-slate-700 mb-1">3. After Repair / مرمت کے بعد</div>
-                {photoAfterRepair ? (
-                  <div className="relative rounded-lg overflow-hidden border border-slate-300">
-                    <img src={photoAfterRepair} alt="After Repair" className="w-full h-32 object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setPhotoAfterRepair('')}
-                      className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full text-xs"
-                    >
-                      ×
-                    </button>
+              {/* 3. After Repair */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                  <div className="text-xs font-bold text-slate-800">3. After Repair / مرمت کے بعد</div>
+                  <span className="text-[10px] font-urdu text-emerald-800 font-semibold">مرمت شدہ حالت</span>
+                </div>
+
+                {/* Photo */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>After Repair Photo / تصویر</span>
+                    {photoAfterRepair && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Photo Added ✓</span>}
                   </div>
-                ) : (
-                  <label className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-colors bg-white">
-                    <Camera className="w-6 h-6 text-slate-400 mb-1" />
-                    <span className="text-xs text-slate-500">Attach After Repair</span>
-                    <span className="font-urdu text-slate-400 text-xs">مرمت کے بعد</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, setPhotoAfterRepair)}
-                    />
-                  </label>
-                )}
+                  {photoAfterRepair ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 shadow-2xs">
+                      <img src={photoAfterRepair} alt="After Repair" className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoAfterRepair('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700"
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors bg-white">
+                      <Camera className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach After Repair Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleCompressedImageUpload(e, setPhotoAfterRepair)}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Video */}
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600 mb-1 flex justify-between">
+                    <span>After Repair Video / ویڈیو</span>
+                    {videoAfterRepair && <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">Video Added ✓</span>}
+                  </div>
+                  {videoAfterRepair ? (
+                    <div className="relative rounded-lg overflow-hidden border border-slate-300 bg-black shadow-2xs">
+                      <video src={videoAfterRepair} controls className="w-full h-28 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setVideoAfterRepair('')}
+                        className="absolute top-1 right-1 w-6 h-6 bg-rose-600 text-white rounded-full text-xs flex items-center justify-center shadow hover:bg-rose-700 z-10"
+                        title="Remove video"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-20 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors bg-white">
+                      <Video className="w-5 h-5 text-slate-400 mb-0.5" />
+                      <span className="text-xs text-slate-700 font-medium">Attach After Repair Video</span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleVideoUpload(e, setVideoAfterRepair)}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1585,68 +1851,367 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
         </div>
       )}
 
-      {/* POST-SAVE QR CODE GENERATION SUCCESS MODAL */}
+      {/* POST-SAVE RICH VERIFICATION & MEDIA SUMMARY MODAL */}
       {savedAuditWithQr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border-2 border-emerald-500 text-center">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800 uppercase tracking-wide">
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>Data Saved & Verified</span>
-              </div>
-              <h3 className="text-xl font-black text-slate-900 mt-0.5">
-                Verification QR Code Generated!
-              </h3>
-              <p className="font-urdu text-emerald-900 text-sm font-semibold mt-0.5">
-                ڈیٹا محفوظ ہو گیا اور تصدیقی کیو آر کوڈ تیار ہے
-              </p>
-            </div>
-
-            {/* Generated Inspection Code */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase">
-                Official Inspection Code
-              </div>
-              <div className="font-mono text-2xl font-black text-emerald-900 tracking-tight">
-                {savedAuditWithQr.id}
-              </div>
-              <div className="text-xs text-slate-600">
-                Project: <strong>{savedAuditWithQr.projectId}</strong> • {savedAuditWithQr.district} ({savedAuditWithQr.tehsil})
-              </div>
-            </div>
-
-            {/* Scannable QR Code Image */}
-            {savedAuditWithQr.qrCodeDataUrl && (
-              <div className="bg-white p-3 rounded-2xl border-2 border-dashed border-emerald-400 inline-block shadow-md">
-                <img
-                  src={savedAuditWithQr.qrCodeDataUrl}
-                  alt="Audit Verification QR Code"
-                  className="w-48 h-48 mx-auto rounded-lg object-contain"
-                />
-                <div className="text-[10px] text-slate-500 font-mono mt-1">
-                  Scan to verify inspection record authenticity
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-auto overflow-hidden border-2 border-emerald-500 flex flex-col max-h-[92vh]">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-500/20 text-emerald-300 rounded-xl flex items-center justify-center border border-emerald-400/30">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+                      Official Inspection Certified & Verified
+                    </span>
+                    <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      Live Recorded
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
+                    Inspection Completed: {savedAuditWithQr.id}
+                  </h3>
+                  <p className="font-urdu text-xs text-emerald-200">
+                    معائنہ ڈیٹا اور تمام تصدیقی تصاویر و ویڈیوز کامیابی سے محفوظ ہو گئیں
+                  </p>
                 </div>
               </div>
-            )}
 
-            {/* Quick Actions */}
-            <div className="space-y-2 pt-2">
-              {savedAuditWithQr.qrCodeDataUrl && (
-                <a
-                  href={savedAuditWithQr.qrCodeDataUrl}
-                  download={`FGRF_Water_Audit_QR_${savedAuditWithQr.id}.png`}
-                  className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download QR Code Image (.png)</span>
-                </a>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const auditToSubmit = savedAuditWithQr;
+                  setSavedAuditWithQr(null);
+                  onSubmitAudit(auditToSubmit);
+                }}
+                className="text-slate-300 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="flex gap-2">
+            {/* Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-6 text-slate-800 text-xs">
+              {/* Top Banner: Verification QR + Inspection Metadata */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 items-center">
+                {/* QR Code Container */}
+                <div className="flex flex-col items-center justify-center text-center space-y-2 md:border-r md:border-slate-200 pr-0 md:pr-4">
+                  {savedAuditWithQr.qrCodeDataUrl ? (
+                    <div className="p-2.5 bg-white rounded-xl border-2 border-emerald-400 shadow-sm inline-block">
+                      <img
+                        src={savedAuditWithQr.qrCodeDataUrl}
+                        alt="Audit Verification QR Code"
+                        className="w-36 h-36 object-contain rounded"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-36 h-36 bg-slate-200 rounded-xl flex items-center justify-center text-slate-500 font-mono">
+                      Generating QR...
+                    </div>
+                  )}
+
+                  <div className="text-[11px] font-bold text-slate-700">Official Verification QR Code</div>
+                  <div className="text-[10px] text-slate-500 font-urdu">موبائل کیمرے سے اسکین کریں</div>
+                  {savedAuditWithQr.qrCodeDataUrl && (
+                    <a
+                      href={savedAuditWithQr.qrCodeDataUrl}
+                      download={`FGRF_Water_Audit_QR_${savedAuditWithQr.id}.png`}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download QR Image (.png)
+                    </a>
+                  )}
+                </div>
+
+                {/* Inspection Meta Details */}
+                <div className="md:col-span-2 space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Inspection Code:</span>
+                      <span className="font-mono font-black text-emerald-900 text-sm">{savedAuditWithQr.id}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Water Project ID:</span>
+                      <span className="font-mono font-bold text-slate-900 text-sm">{savedAuditWithQr.projectId}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">District & Tehsil:</span>
+                      <span className="font-semibold text-slate-800">{savedAuditWithQr.district} ({savedAuditWithQr.tehsil})</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Installation Type:</span>
+                      <span className="font-semibold text-slate-800">{savedAuditWithQr.installationType}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Evaluated Condition:</span>
+                      <span className="inline-block px-2.5 py-0.5 rounded-full font-bold text-xs bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        {savedAuditWithQr.overallCondition}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Field Inspector:</span>
+                      <span className="font-semibold text-slate-800">{savedAuditWithQr.inspectorName} ({savedAuditWithQr.inspectorId})</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 leading-snug">
+                    <span className="font-bold">Real-Time Mobile Scan:</span> Scanning this QR Code with any smartphone camera directly displays the live official certificate and all field photos and videos on the web.
+                  </div>
+                </div>
+              </div>
+
+              {/* Section D Media: Photographs & Videos Gallery */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-emerald-600" />
+                    <span>Completed Form Media: Photos & Videos Attached</span>
+                  </h4>
+                  <span className="font-urdu text-xs font-semibold text-emerald-800">
+                    موقع پر لی گئی تصدیقی تصاویر اور ویڈیوز
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Site Overview */}
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                    <div className="font-bold text-xs text-slate-800 flex justify-between">
+                      <span>1. Site Overview</span>
+                      <span className="font-urdu text-[11px] text-slate-500">پورا منظر</span>
+                    </div>
+                    {savedAuditWithQr.attachedPhotos?.siteOverview ? (
+                      <div className="rounded-lg overflow-hidden border border-slate-300">
+                        <img
+                          src={savedAuditWithQr.attachedPhotos.siteOverview}
+                          alt="Site Overview"
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-32 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+                        No overview photo attached
+                      </div>
+                    )}
+                    {savedAuditWithQr.attachedPhotos?.siteVideo && (
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                          <Video className="w-3 h-3 text-emerald-600" /> Site Overview Video
+                        </div>
+                        <video
+                          src={savedAuditWithQr.attachedPhotos.siteVideo}
+                          controls
+                          className="w-full h-28 object-cover rounded-lg border border-slate-300 bg-black"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Before / Defect */}
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                    <div className="font-bold text-xs text-slate-800 flex justify-between">
+                      <span>2. Before / Defect</span>
+                      <span className="font-urdu text-[11px] text-slate-500">خرابی کی حالت</span>
+                    </div>
+                    {savedAuditWithQr.attachedPhotos?.beforeDefect ? (
+                      <div className="rounded-lg overflow-hidden border border-slate-300">
+                        <img
+                          src={savedAuditWithQr.attachedPhotos.beforeDefect}
+                          alt="Before Defect"
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-32 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+                        No defect photo attached
+                      </div>
+                    )}
+                    {savedAuditWithQr.attachedPhotos?.beforeVideo && (
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                          <Video className="w-3 h-3 text-amber-600" /> Defect Video
+                        </div>
+                        <video
+                          src={savedAuditWithQr.attachedPhotos.beforeVideo}
+                          controls
+                          className="w-full h-28 object-cover rounded-lg border border-slate-300 bg-black"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* After Repair */}
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                    <div className="font-bold text-xs text-slate-800 flex justify-between">
+                      <span>3. After Repair</span>
+                      <span className="font-urdu text-[11px] text-slate-500">مرمت کے بعد</span>
+                    </div>
+                    {savedAuditWithQr.attachedPhotos?.afterRepair ? (
+                      <div className="rounded-lg overflow-hidden border border-slate-300">
+                        <img
+                          src={savedAuditWithQr.attachedPhotos.afterRepair}
+                          alt="After Repair"
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-32 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+                        No after repair photo attached
+                      </div>
+                    )}
+                    {savedAuditWithQr.attachedPhotos?.afterVideo && (
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                          <Video className="w-3 h-3 text-emerald-600" /> After Repair Video
+                        </div>
+                        <video
+                          src={savedAuditWithQr.attachedPhotos.afterVideo}
+                          controls
+                          className="w-full h-28 object-cover rounded-lg border border-slate-300 bg-black"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section C: Repair Items Table with Repair Photos & Videos */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-amber-600" />
+                    <span>Repair & Corrective Action Items with Media Evidence</span>
+                  </h4>
+                  <span className="font-urdu text-xs font-semibold text-amber-800">
+                    مرمتی کام اور تصویری / ویڈیو ثبوت
+                  </span>
+                </div>
+
+                {savedAuditWithQr.repairs && savedAuditWithQr.repairs.length > 0 ? (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-2.5">ID / Defect Found</th>
+                          <th className="p-2.5">Repair Action Required</th>
+                          <th className="p-2.5">Responsible</th>
+                          <th className="p-2.5">Target Date</th>
+                          <th className="p-2.5">Status</th>
+                          <th className="p-2.5">Photo & Video Evidence</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {savedAuditWithQr.repairs.map((rep, idx) => (
+                          <tr key={rep.id || idx} className="hover:bg-slate-50/60">
+                            <td className="p-2.5 font-medium text-slate-900">
+                              <span className="font-mono text-[10px] font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded mr-1">
+                                {rep.id}
+                              </span>
+                              <div>{rep.defectFound || 'N/A'}</div>
+                            </td>
+                            <td className="p-2.5 text-slate-700">{rep.repairRequired || 'N/A'}</td>
+                            <td className="p-2.5 text-slate-800">{rep.responsiblePerson}</td>
+                            <td className="p-2.5 font-mono">{rep.targetDate}</td>
+                            <td className="p-2.5">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                rep.status === 'Done' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {rep.status}
+                              </span>
+                            </td>
+                            <td className="p-2.5">
+                              <div className="flex items-center gap-2">
+                                {rep.repairPhoto && (
+                                  <div className="relative group">
+                                    <img
+                                      src={rep.repairPhoto}
+                                      alt="Repair Photo"
+                                      className="w-10 h-10 object-cover rounded border border-slate-300"
+                                    />
+                                    <span className="text-[9px] block text-slate-500 font-mono">Photo</span>
+                                  </div>
+                                )}
+                                {rep.repairVideo && (
+                                  <div className="w-16 h-10 rounded overflow-hidden border border-slate-300 bg-black">
+                                    <video src={rep.repairVideo} controls className="w-full h-full object-cover" />
+                                  </div>
+                                )}
+                                {!rep.repairPhoto && !rep.repairVideo && (
+                                  <span className="text-slate-400 italic text-[10px]">No media</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-center font-medium">
+                    ✓ No repair required. System is functioning in satisfactory condition. (کوئی مرمت درکار نہیں)
+                  </div>
+                )}
+              </div>
+
+              {/* Digital Signatures Verified */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3">
+                  {savedAuditWithQr.inspectorSignature && (
+                    <img
+                      src={savedAuditWithQr.inspectorSignature}
+                      alt="Inspector Signature"
+                      className="h-10 border border-slate-300 rounded bg-white p-1"
+                    />
+                  )}
+                  <div>
+                    <span className="text-[10px] uppercase text-slate-500 block">Inspector Verified:</span>
+                    <span className="font-bold text-slate-800">{savedAuditWithQr.inspectorName}</span>
+                    <span className="text-[10px] text-slate-500 block font-mono">{savedAuditWithQr.inspectionSignDate}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {savedAuditWithQr.communityRepSignature && (
+                    <img
+                      src={savedAuditWithQr.communityRepSignature}
+                      alt="Community Rep Signature"
+                      className="h-10 border border-slate-300 rounded bg-white p-1"
+                    />
+                  )}
+                  <div>
+                    <span className="text-[10px] uppercase text-slate-500 block">Community Representative:</span>
+                    <span className="font-bold text-slate-800">{savedAuditWithQr.communityRepName}</span>
+                    <span className="text-[10px] text-slate-500 block font-mono">{savedAuditWithQr.communityRepDate}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions Footer */}
+            <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-slate-500 text-[11px] font-mono">
+                Verification Form Reference: {savedAuditWithQr.formReference}
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {onViewAuditCertificate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const auditToView = savedAuditWithQr;
+                      setSavedAuditWithQr(null);
+                      onSubmitAudit(auditToView);
+                      onViewAuditCertificate(auditToView);
+                    }}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>View / Print Full Certificate</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1655,7 +2220,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                     setInspectionCode(generateNextInspectionCode());
                     onSubmitAudit(auditToSubmit);
                   }}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Start New Form
                 </button>
@@ -1667,9 +2232,9 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                     setSavedAuditWithQr(null);
                     onSubmitAudit(auditToSubmit);
                   }}
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>View All Records</span>
+                  <span>Go to Records Repository</span>
                   <CheckCircle2 className="w-4 h-4" />
                 </button>
               </div>

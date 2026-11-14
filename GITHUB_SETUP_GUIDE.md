@@ -75,18 +75,18 @@ git push -u origin main --force
 
 ### Step 3: Activate GitHub Pages for Online Web Operating
 
-Once the code is pushed to GitHub, turn on **GitHub Pages** so anyone with the link can operate the software online:
+The deployment workflow can enable **GitHub Pages** automatically. Before running it for the first time, create a fine-grained personal access token limited to this repository with **Pages: Read and write** permission, then save it as the `PAGES_DEPLOY_TOKEN` Actions secret:
 
-1. Open your repository page on GitHub.
-2. Click on the **Settings** tab (اوپر دائیں جانب Settings پر کلک کریں).
-3. In the left navigation menu, click **Pages** (بائیں مینو میں Pages منتخب کریں).
-4. Under **Build and deployment** -> **Source**:
-   - Change from "Deploy from a branch" to **"GitHub Actions"** (گٹ ہب ایکشنز منتخب کریں).
-5. That's it! GitHub Actions will immediately run the automated workflow pre-configured in `.github/workflows/deploy.yml`.
-6. Within 60 seconds, your system will be **LIVE ONLINE** at:
+1. Create a fine-grained token for this repository and grant it **Pages: Read and write** permission.
+2. Open the repository's **Settings** → **Secrets and variables** → **Actions**.
+3. Add a repository secret named `PAGES_DEPLOY_TOKEN` and paste the token as its value. Do not commit the token or share it in chat.
+4. Run the `Deploy FGRF Water Projects System to GitHub Pages` workflow. Its setup step will enable Pages and configure the site for GitHub Actions.
+5. Within 60 seconds of a successful run, your system will be **LIVE ONLINE** at:
    ```
    https://YOUR_USERNAME.github.io/fgrf-water-projects-audit/
    ```
+
+If organization policy prevents the workflow from enabling Pages, enable it manually in **Settings** → **Pages** → **Build and deployment** → **Source** → **GitHub Actions**.
 
 ---
 

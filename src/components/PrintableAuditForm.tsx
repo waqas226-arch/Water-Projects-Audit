@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Download, X, Droplets, CheckSquare, Square, QrCode } from 'lucide-react';
+import { Printer, Download, X, Droplets, CheckSquare, Square, QrCode, Camera, Video, Play, ExternalLink } from 'lucide-react';
 import { AuditRecord } from '../types/index.ts';
 import { WATER_SAFETY_DISCLAIMER_EN, WATER_SAFETY_DISCLAIMER_UR } from '../utils/auditLogic.ts';
 import { fgrfLogoBase64 } from '../assets/fgrfLogo.ts';
@@ -14,19 +14,14 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
   const [qrCodeUrl, setQrCodeUrl] = useState<string>(audit.qrCodeDataUrl || '');
 
   useEffect(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const verificationUrl = `${origin}${pathname}?view_audit=${audit.id}`;
+
     if (audit.qrCodeDataUrl) {
       setQrCodeUrl(audit.qrCodeDataUrl);
     } else {
-      const payload = JSON.stringify({
-        verification: 'FGRF Water Projects Central Audit Record',
-        inspectionCode: audit.id,
-        projectId: audit.projectId,
-        district: audit.district,
-        condition: audit.overallCondition,
-        date: audit.inspectionDateTime?.slice(0, 10),
-        dept: 'Data Management & ERP Department - FGRF'
-      });
-      QRCode.toDataURL(payload, { width: 220, margin: 1, color: { dark: '#064e3b', light: '#ffffff' } })
+      QRCode.toDataURL(verificationUrl, { width: 220, margin: 1, color: { dark: '#064e3b', light: '#ffffff' } })
         .then((url) => setQrCodeUrl(url))
         .catch(() => {});
     }
@@ -359,9 +354,10 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                   <tr className="bg-slate-100 border-b border-slate-400 text-slate-800">
                     <th className="border-r border-slate-400 p-1.5 text-left">Defect / Issue Found / درج شدہ خرابی</th>
                     <th className="border-r border-slate-400 p-1.5 text-left">Repair Required / درکار مرمت</th>
-                    <th className="border-r border-slate-400 p-1.5 text-left w-36">Responsible Person / ذمہ دار فرد</th>
+                    <th className="border-r border-slate-400 p-1.5 text-left w-32">Responsible Person / ذمہ دار فرد</th>
                     <th className="border-r border-slate-400 p-1.5 text-center w-24">Target Date / آخری تاریخ</th>
-                    <th className="p-1.5 text-center w-28">Status / حالت</th>
+                    <th className="border-r border-slate-400 p-1.5 text-center w-24">Status / حالت</th>
+                    <th className="p-1.5 text-center w-40">Photo & Video Evidence / تصویری و ویڈیو ثبوت</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,14 +368,39 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                         <td className="border-r border-slate-300 p-2 text-slate-700">{rep.repairRequired}</td>
                         <td className="border-r border-slate-300 p-2 text-slate-800">{rep.responsiblePerson}</td>
                         <td className="border-r border-slate-300 p-2 text-center font-mono">{rep.targetDate}</td>
-                        <td className="p-2 text-center font-medium">
-                          {rep.status === 'Done' ? 'Done / مرمت شدہ' : 'Pending / زیر التوا'}
+                        <td className="border-r border-slate-300 p-2 text-center font-medium">
+                          {rep.status === 'Done' ? (
+                            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Done / مرمت شدہ</span>
+                          ) : (
+                            <span className="text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Pending / زیر التوا</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {(rep.repairPhoto || rep.beforePhoto || rep.afterPhoto) && (
+                              <img
+                                src={rep.repairPhoto || rep.beforePhoto || rep.afterPhoto}
+                                alt="Repair Photo Evidence"
+                                className="w-12 h-10 object-cover rounded border border-slate-300 shadow-2xs"
+                              />
+                            )}
+                            {(rep.repairVideo || rep.beforeVideo || rep.afterVideo) && (
+                              <video
+                                src={rep.repairVideo || rep.beforeVideo || rep.afterVideo}
+                                controls
+                                className="w-16 h-10 object-cover rounded border border-slate-300 bg-black shadow-2xs"
+                              />
+                            )}
+                            {!rep.repairPhoto && !rep.beforePhoto && !rep.afterPhoto && !rep.repairVideo && !rep.beforeVideo && !rep.afterVideo && (
+                              <span className="text-slate-400 italic text-[10px]">No media attached</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="p-3 text-center text-slate-500 italic">
+                      <td colSpan={6} className="p-3 text-center text-slate-500 italic">
                         No repair required. System is functioning in satisfactory condition. (کوئی مرمت درکار نہیں)
                       </td>
                     </tr>
@@ -408,15 +429,100 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                   </div>
                 </div>
 
-                {/* Photographs attached */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-200">
-                  <div className="font-bold text-slate-800 mb-1 sm:mb-0">
-                    Photographs attached / منسلک تصاویر:
+                {/* On-Site Photographs & Videos Gallery (Visual Evidence) */}
+                <div className="space-y-2 pb-2 border-b border-slate-200">
+                  <div className="font-bold text-slate-800 flex justify-between items-center">
+                    <span className="flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-emerald-700" />
+                      Photographs & Video Evidence / موقع پر لی گئی تصدیقی تصاویر و ویڈیوز:
+                    </span>
+                    <span className="font-urdu text-[11px] text-slate-600">ثبوت برائے تصدیق</span>
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {renderCheckbox(Boolean(audit.attachedPhotos?.beforeDefect), 'Before/defect', 'خرابی سے پہلے')}
-                    {renderCheckbox(Boolean(audit.attachedPhotos?.afterRepair), 'After repair', 'مرمت کے بعد')}
-                    {renderCheckbox(Boolean(audit.attachedPhotos?.siteOverview), 'Site overview', 'مقام کی تصویر')}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    {/* Site Overview */}
+                    <div className="border border-slate-300 rounded-lg p-2 bg-slate-50 space-y-1.5">
+                      <div className="font-bold text-[11px] text-slate-800 flex justify-between">
+                        <span>1. Site Overview</span>
+                        <span className="font-urdu text-[10px] text-slate-600">پورا منظر</span>
+                      </div>
+                      {audit.attachedPhotos?.siteOverview ? (
+                        <img
+                          src={audit.attachedPhotos.siteOverview}
+                          alt="Site Overview"
+                          className="w-full h-32 object-cover rounded border border-slate-300"
+                        />
+                      ) : (
+                        <div className="h-32 bg-slate-100 rounded border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px]">
+                          No overview photo attached
+                        </div>
+                      )}
+                      {audit.attachedPhotos?.siteVideo && (
+                        <div className="mt-1">
+                          <video
+                            src={audit.attachedPhotos.siteVideo}
+                            controls
+                            className="w-full h-24 object-cover rounded border border-slate-300 bg-black"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Before / Defect */}
+                    <div className="border border-slate-300 rounded-lg p-2 bg-slate-50 space-y-1.5">
+                      <div className="font-bold text-[11px] text-slate-800 flex justify-between">
+                        <span>2. Before / Defect</span>
+                        <span className="font-urdu text-[10px] text-slate-600">خرابی سے پہلے</span>
+                      </div>
+                      {audit.attachedPhotos?.beforeDefect ? (
+                        <img
+                          src={audit.attachedPhotos.beforeDefect}
+                          alt="Before Defect"
+                          className="w-full h-32 object-cover rounded border border-slate-300"
+                        />
+                      ) : (
+                        <div className="h-32 bg-slate-100 rounded border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px]">
+                          No defect photo attached
+                        </div>
+                      )}
+                      {audit.attachedPhotos?.beforeVideo && (
+                        <div className="mt-1">
+                          <video
+                            src={audit.attachedPhotos.beforeVideo}
+                            controls
+                            className="w-full h-24 object-cover rounded border border-slate-300 bg-black"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* After Repair */}
+                    <div className="border border-slate-300 rounded-lg p-2 bg-slate-50 space-y-1.5">
+                      <div className="font-bold text-[11px] text-slate-800 flex justify-between">
+                        <span>3. After Repair</span>
+                        <span className="font-urdu text-[10px] text-slate-600">مرمت کے بعد</span>
+                      </div>
+                      {audit.attachedPhotos?.afterRepair ? (
+                        <img
+                          src={audit.attachedPhotos.afterRepair}
+                          alt="After Repair"
+                          className="w-full h-32 object-cover rounded border border-slate-300"
+                        />
+                      ) : (
+                        <div className="h-32 bg-slate-100 rounded border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px]">
+                          No repair photo attached
+                        </div>
+                      )}
+                      {audit.attachedPhotos?.afterVideo && (
+                        <div className="mt-1">
+                          <video
+                            src={audit.attachedPhotos.afterVideo}
+                            controls
+                            className="w-full h-24 object-cover rounded border border-slate-300 bg-black"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

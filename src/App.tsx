@@ -43,7 +43,12 @@ import { LoginScreen } from './components/LoginScreen.tsx';
 import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
-import { Menu } from 'lucide-react';
+import { 
+  startRealtimeCloudSync, 
+  syncAllWithCloud, 
+  fetchCloudData 
+} from './utils/cloudSync.ts';
+import { Menu, Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUserState] = useState<UserProfile>(getCurrentUser());
@@ -79,6 +84,66 @@ export default function App() {
   const [activeAiAudit, setActiveAiAudit] = useState<AuditRecord | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [preselectedAuditProjectId, setPreselectedAuditProjectId] = useState<string | undefined>(undefined);
+
+  // Cloud Sync state
+  const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
+  const [lastSyncDisplay, setLastSyncDisplay] = useState<string>('Live Connected');
+
+  // Real-Time Cloud Master Database Live Sync (Multi-location field staff <-> HQ Super Admin)
+  useEffect(() => {
+    const cleanup = startRealtimeCloudSync((payload) => {
+      setAudits(payload.audits);
+      setProjects(payload.projects);
+      setRepairs(payload.repairs);
+      setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      if (payload.newCount > 0) {
+        showToast(`🔄 Real-time Cloud Sync: Received ${payload.newCount} new inspection record(s) from field staff!`);
+      }
+    }, currentUser.id);
+
+    return cleanup;
+  }, [currentUser.id]);
+
+  // Listen to ?view_audit= in URL for QR Code scan instant verification
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetAuditId = urlParams.get('view_audit');
+      if (targetAuditId) {
+        const found = audits.find((a) => a.id.toLowerCase() === targetAuditId.toLowerCase());
+        if (found) {
+          setActivePrintAudit(found);
+        } else {
+          // Immediately fetch from cloud if not locally cached
+          fetchCloudData().then((cloud) => {
+            if (cloud && cloud.audits) {
+              const cloudFound = cloud.audits.find((a) => a.id.toLowerCase() === targetAuditId.toLowerCase());
+              if (cloudFound) {
+                setActivePrintAudit(cloudFound);
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+  }, [audits]);
+
+  // Manual Trigger for Instant Cloud Sync
+  const handleManualCloudSync = async () => {
+    setIsCloudSyncing(true);
+    try {
+      const res = await syncAllWithCloud(currentUser.id);
+      setAudits(getAudits());
+      setProjects(getProjects());
+      setRepairs(getRepairs());
+      setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      showToast(res.message);
+    } catch {
+      showToast('Cloud sync completed with local cache.');
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
 
   // Success toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -342,8 +407,26 @@ export default function App() {
             </div>
           </div>
 
-          {/* Top Right Quick Profile & Settings */}
+          {/* Top Right Quick Profile & Settings & Live Cloud Master DB */}
           <div className="flex items-center gap-2">
+            {/* Live Cloud Master DB Real-time Sync Status & Manual Trigger */}
+            <button
+              type="button"
+              onClick={handleManualCloudSync}
+              disabled={isCloudSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 transition-colors text-xs font-bold shadow-2xs cursor-pointer"
+              title="Central Cloud Master Database - Multi-Device Live Sync / مرکزی کلاؤڈ ڈیٹا بیس سنک"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <Cloud className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="hidden sm:inline">Cloud Master DB:</span>
+              <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
+              <RefreshCw className={`w-3 h-3 text-emerald-600 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+            </button>
+
             <button
               type="button"
               onClick={() => setIsSettingsModalOpen(true)}
@@ -409,6 +492,7 @@ export default function App() {
               setPreselectedAuditProjectId(undefined);
               setCurrentTab('dashboard');
             }}
+            onViewAuditCertificate={(audit) => setActivePrintAudit(audit)}
           />
         )}
 
