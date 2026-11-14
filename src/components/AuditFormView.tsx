@@ -25,6 +25,7 @@ import {
   Printer,
   Sparkles,
   ExternalLink,
+  Wrench,
   Image as ImageIcon
 } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -59,7 +60,8 @@ import {
   generateNextInspectionCode, 
   getMasterHeads, 
   getGeoHierarchy, 
-  logUserActivity 
+  logUserActivity,
+  submitNewAudit
 } from '../utils/storage.ts';
 import { SignaturePad } from './SignaturePad.tsx';
 
@@ -536,6 +538,13 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
       actionDescription: `Generated Auto Audit Code ${auditId} & Created Verification QR Code`,
       details: `Project: ${finalAudit.projectId} in ${finalAudit.district} (${finalAudit.tehsil}). Overall: ${finalAudit.overallCondition}`
     });
+
+    // Immediately persist to central master storage & projects database
+    try {
+      submitNewAudit(finalAudit);
+    } catch (saveErr) {
+      console.error('Error auto-saving new audit to master database:', saveErr);
+    }
 
     setIsGeneratingQr(false);
     setShowConfirmModal(false);

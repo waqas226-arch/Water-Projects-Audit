@@ -229,8 +229,13 @@ export function submitNewAudit(audit: AuditRecord): { audit: AuditRecord; update
   const projects = getProjects();
   const repairs = getRepairs();
 
-  // Add new audit to list
-  audits.unshift(audit);
+  // Add new audit to list (or update if already saved)
+  const existingAuditIdx = audits.findIndex((a) => a.id === audit.id);
+  if (existingAuditIdx >= 0) {
+    audits[existingAuditIdx] = audit;
+  } else {
+    audits.unshift(audit);
+  }
   saveAudits(audits);
 
   // Add any new repairs to master repair registry
