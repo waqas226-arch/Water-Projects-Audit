@@ -89,6 +89,9 @@ export function getCloudSyncEndpoint(): string {
     const custom = localStorage.getItem(STORAGE_ENDPOINT_KEY);
     if (custom && custom.trim().length > 0) return custom.trim();
   } catch {}
+  if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('github.io')) {
+    return `${window.location.origin}/api/cloud-sync`;
+  }
   return DEFAULT_CLOUD_API;
 }
 
@@ -129,7 +132,7 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     }
 
     const json = await res.json();
-    // Support restful-api.dev payload structure
+    // Support restful-api.dev payload structure and direct server.ts structure
     const data: CloudDatabasePayload = json.data || json;
     
     const rawAudits = Array.isArray(data.audits) ? data.audits : [];
@@ -171,16 +174,22 @@ export async function pushLocalToCloud(
   };
 
   try {
+    const isLocalServer = endpoint.includes('/api/cloud-sync');
+    const method = isLocalServer ? 'POST' : 'PUT';
+    const body = isLocalServer 
+      ? JSON.stringify(payload)
+      : JSON.stringify({
+          name: 'FGRF_WATER_PROJECTS_MASTER_CLOUD_DB',
+          data: payload
+        });
+
     const res = await fetch(endpoint, {
-      method: 'PUT',
+      method,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        name: 'FGRF_WATER_PROJECTS_MASTER_CLOUD_DB',
-        data: payload
-      })
+      body
     });
 
     if (res.ok) {

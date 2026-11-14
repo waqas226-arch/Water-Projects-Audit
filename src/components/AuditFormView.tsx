@@ -63,6 +63,7 @@ import {
   logUserActivity,
   submitNewAudit
 } from '../utils/storage.ts';
+import { encodeAuditForQr } from '../utils/auditPayload.ts';
 import { SignaturePad } from './SignaturePad.tsx';
 
 interface AuditFormViewProps {
@@ -466,25 +467,6 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   const handleFinalSubmit = async () => {
     setIsGeneratingQr(true);
     const auditId = inspectionCode;
-    
-    // Live Cloud Verification URL encoded into QR Code
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-    const verificationUrl = `${origin}${pathname}?view_audit=${auditId}`;
-
-    let qrCodeDataUrl = '';
-    try {
-      qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
-        width: 320,
-        margin: 2,
-        color: {
-          dark: '#064e3b',
-          light: '#ffffff'
-        }
-      });
-    } catch (err) {
-      console.error('Failed to generate QR code data URL', err);
-    }
 
     const finalAudit: AuditRecord = {
       id: auditId,
@@ -510,7 +492,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
       checkpoints,
       repairs,
       overallCondition,
-      qrCodeDataUrl,
+      qrCodeDataUrl: '',
       attachedPhotos: {
         siteOverview: photoSiteOverview || undefined,
         siteVideo: videoSiteOverview || undefined,
@@ -529,6 +511,28 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Live Self-Contained Verification URL encoded into QR Code for 100% offline & multi-device scan
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const payload = encodeAuditForQr(finalAudit);
+    const verificationUrl = `${origin}${pathname}?view_audit=${auditId}&d=${payload}`;
+
+    let qrCodeDataUrl = '';
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
+        width: 320,
+        margin: 2,
+        color: {
+          dark: '#064e3b',
+          light: '#ffffff'
+        }
+      });
+    } catch (err) {
+      console.error('Failed to generate QR code data URL', err);
+    }
+
+    finalAudit.qrCodeDataUrl = qrCodeDataUrl;
 
     logUserActivity({
       userId: currentUser.id,

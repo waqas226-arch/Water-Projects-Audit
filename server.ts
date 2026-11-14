@@ -20,6 +20,61 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// Central Cloud Master Database Endpoints (Unlimited Local/Cloud Persistence)
+const DB_FILE = path.join(__dirname, 'master_cloud_database.json');
+function readMasterDb() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    }
+  } catch {}
+  return { audits: [], projects: [], repairs: [], lastUpdated: new Date().toISOString() };
+}
+
+function writeMasterDb(data: any) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write master db file:', err);
+  }
+}
+
+app.get('/api/cloud-sync', (req, res) => {
+  res.json(readMasterDb());
+});
+
+app.post('/api/cloud-sync', (req, res) => {
+  const incoming = req.body || {};
+  const current = readMasterDb();
+  const mergedAudits = [...(current.audits || [])];
+  for (const a of (incoming.audits || [])) {
+    const idx = mergedAudits.findIndex((x: any) => x && x.id === a.id);
+    if (idx >= 0) mergedAudits[idx] = a;
+    else mergedAudits.unshift(a);
+  }
+  const mergedProjects = [...(current.projects || [])];
+  for (const p of (incoming.projects || [])) {
+    const idx = mergedProjects.findIndex((x: any) => x && x.id === p.id);
+    if (idx >= 0) mergedProjects[idx] = p;
+    else mergedProjects.unshift(p);
+  }
+  const mergedRepairs = [...(current.repairs || [])];
+  for (const r of (incoming.repairs || [])) {
+    const idx = mergedRepairs.findIndex((x: any) => x && x.id === r.id);
+    if (idx >= 0) mergedRepairs[idx] = r;
+    else mergedRepairs.unshift(r);
+  }
+  const updated = {
+    audits: mergedAudits,
+    projects: mergedProjects,
+    repairs: mergedRepairs,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: incoming.updatedBy || 'FGRF-HQ'
+  };
+  writeMasterDb(updated);
+  res.json({ success: true, count: mergedAudits.length, lastUpdated: updated.lastUpdated });
+});
+
 // Gemini High-Thinking Water Audit Quality Advisor
 app.post('/api/gemini/analyze-audit', async (req, res) => {
   const { auditData, question } = req.body;

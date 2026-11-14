@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { AuditRecord, InspectionApprovalStatus, UserProfile } from '../types/index.ts';
 import { filterRecordsByJurisdiction } from '../utils/auditLogic.ts';
+import QRCode from 'qrcode';
+import { encodeAuditForQr } from '../utils/auditPayload.ts';
 
 interface InspectionRecordsViewProps {
   audits: AuditRecord[];
@@ -44,6 +46,23 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCondition, setFilterCondition] = useState<string>('all');
   const [selectedQrAudit, setSelectedQrAudit] = useState<AuditRecord | null>(null);
+  const [modalQrCodeUrl, setModalQrCodeUrl] = useState<string>('');
+
+  React.useEffect(() => {
+    if (!selectedQrAudit) {
+      setModalQrCodeUrl('');
+      return;
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const payload = encodeAuditForQr(selectedQrAudit);
+    const verificationUrl = `${origin}${pathname}?view_audit=${selectedQrAudit.id}&d=${payload}`;
+    QRCode.toDataURL(verificationUrl, {
+      width: 320,
+      margin: 2,
+      color: { dark: '#064e3b', light: '#ffffff' }
+    }).then(url => setModalQrCodeUrl(url)).catch(() => {});
+  }, [selectedQrAudit]);
 
   // Review modal state
   const [reviewingAudit, setReviewingAudit] = useState<AuditRecord | null>(null);
@@ -429,10 +448,10 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
             </div>
 
             {/* QR Code Image */}
-            {selectedQrAudit.qrCodeDataUrl ? (
+            {(modalQrCodeUrl || selectedQrAudit.qrCodeDataUrl) ? (
               <div className="p-2 bg-white rounded-xl border-2 border-dashed border-emerald-400 inline-block shadow-sm">
                 <img
-                  src={selectedQrAudit.qrCodeDataUrl}
+                  src={modalQrCodeUrl || selectedQrAudit.qrCodeDataUrl}
                   alt="Audit QR"
                   className="w-40 h-40 mx-auto object-contain rounded-lg"
                 />
@@ -442,7 +461,7 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
               </div>
             ) : (
               <div className="p-6 bg-slate-50 rounded-xl text-xs text-slate-400">
-                No stored QR Code image for this audit.
+                Generating verification QR Code...
               </div>
             )}
 
@@ -494,9 +513,9 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
                 <span>View Full Official Certificate & All Media</span>
               </button>
 
-              {selectedQrAudit.qrCodeDataUrl && (
+              {(modalQrCodeUrl || selectedQrAudit.qrCodeDataUrl) && (
                 <a
-                  href={selectedQrAudit.qrCodeDataUrl}
+                  href={modalQrCodeUrl || selectedQrAudit.qrCodeDataUrl}
                   download={`FGRF_Water_Audit_QR_${selectedQrAudit.id}.png`}
                   className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer block"
                 >

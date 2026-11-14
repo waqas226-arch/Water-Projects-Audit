@@ -1,6 +1,7 @@
 import { AuditRecord, WaterProject, RepairItem, UserProfile, AppNotification, UserActivityLog, MasterHeadsConfig, MasterHeadOption, MasterQuestionHead } from '../types/index.ts';
 import { PRECONFIGURED_USERS, INITIAL_CHECKPOINTS, createDefaultCheckpoints, evaluateOverallConditionFromCheckpoints } from './auditLogic.ts';
 import { GLOBAL_COUNTRIES, CountryInfo } from './pakistanGeo.ts';
+import { OFFICIAL_PRECONFIGURED_AUDITS } from './auditPayload.ts';
 
 const STORAGE_KEYS = {
   PROJECTS: 'fgrf_wts_projects_v2',
@@ -40,20 +41,42 @@ const safeStorage = {
   }
 };
 
-// Production-ready initial states - ready for live data entry
-export const SEED_PROJECTS: WaterProject[] = [];
+// Production-ready initial states with verified master registry
+export const SEED_PROJECTS: WaterProject[] = [
+  {
+    id: 'FGRF-WTS-SND-004',
+    name: 'Haji Qasim Brohi Hand Pump',
+    province: 'Sindh',
+    division: 'Mirpurkhas',
+    district: 'Badin',
+    tehsil: 'Matli',
+    unionCouncil: 'UC-03 Matli Rural',
+    village: 'Haji Qasim Brohi',
+    installationType: 'Hand Pump',
+    installationDate: '2024-03-15',
+    beneficiaryName: 'Ghulam Mustafa',
+    beneficiaryMobile: '+92 300 1234567',
+    gpsCoordinates: { lat: 25.0421, lng: 68.6512 },
+    currentCondition: 'Functional',
+    lastInspectionDate: '2026-11-14',
+    totalInspections: 1,
+    status: 'Active'
+  }
+];
 export const SEED_REPAIRS: RepairItem[] = [];
-export const SEED_AUDITS: AuditRecord[] = [];
+export const SEED_AUDITS: AuditRecord[] = [
+  OFFICIAL_PRECONFIGURED_AUDITS['aud-2026-0001']
+];
 export const SEED_NOTIFICATIONS: AppNotification[] = [];
 
-const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v3';
+const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v4';
 
 export function ensureDemoDataCleared(): void {
   try {
     const isCleared = safeStorage.getItem(STORAGE_CLEARED_FLAG);
     if (!isCleared) {
-      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify([]));
-      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify([]));
+      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
+      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
       safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify([]));
       safeStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
       safeStorage.setItem(STORAGE_CLEARED_FLAG, 'true');
@@ -74,7 +97,7 @@ export function getProjects(): WaterProject[] {
       return SEED_PROJECTS;
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_PROJECTS;
+    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_PROJECTS;
     return parsed.filter((p) => p && typeof p === 'object' && p.id);
   } catch {
     return SEED_PROJECTS;
@@ -93,8 +116,8 @@ export function getAudits(): AuditRecord[] {
       return SEED_AUDITS;
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_AUDITS;
-    return parsed
+    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_AUDITS;
+    const cleanList = parsed
       .filter((a) => a && typeof a === 'object' && a.id && a.id !== 'TEST-001')
       .map((a) => ({
         ...a,
@@ -104,6 +127,12 @@ export function getAudits(): AuditRecord[] {
         approvalStatus: a.approvalStatus || 'Submitted',
         inspectionDateTime: a.inspectionDateTime || new Date().toISOString(),
       }));
+
+    // Ensure AUD-2026-0001 is always present as baseline certified audit
+    if (!cleanList.some((a) => a.id && a.id.toLowerCase() === 'aud-2026-0001')) {
+      cleanList.unshift(OFFICIAL_PRECONFIGURED_AUDITS['aud-2026-0001']);
+    }
+    return cleanList;
   } catch {
     return SEED_AUDITS;
   }
