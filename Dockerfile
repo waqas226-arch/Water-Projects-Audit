@@ -3,11 +3,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package definitions
-COPY package*.json ./
+# Copy package definitions and npm configuration
+COPY package*.json .npmrc* ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with legacy peer deps protection
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Copy application source
 COPY . .
