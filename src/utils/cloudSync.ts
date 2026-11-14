@@ -9,6 +9,7 @@
  */
 
 import { AuditRecord, WaterProject, RepairItem } from '../types/index.ts';
+import { createDefaultCheckpoints } from './auditLogic.ts';
 import { getAudits, getProjects, getRepairs, saveAudits, saveProjects, saveRepairs } from './storage.ts';
 
 // Default global cloud relay endpoint for FGRF Water Projects Master Database
@@ -36,6 +37,51 @@ export interface SyncResult {
   newProjectsCount: number;
   message: string;
   timestamp: string;
+}
+
+export function sanitizeAuditRecord(raw: any): AuditRecord | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const id = raw.id ? String(raw.id).trim() : '';
+  if (!id || id === 'TEST-001') return null;
+
+  return {
+    id,
+    formReference: raw.formReference || 'FGRF-WTS-AUD-002.00-26',
+    projectId: raw.projectId || raw.project || 'Unknown Project',
+    country: raw.country || 'Pakistan',
+    province: raw.province || 'Punjab',
+    division: raw.division || '',
+    district: raw.district || '',
+    tehsil: raw.tehsil || '',
+    unionCouncil: raw.unionCouncil || '',
+    village: raw.village || '',
+    fullSiteAddress: raw.fullSiteAddress || '',
+    gpsCoordinates: raw.gpsCoordinates || { lat: 30.3753, lng: 69.3451 },
+    beneficiaryName: raw.beneficiaryName || '',
+    beneficiaryMobile: raw.beneficiaryMobile || '',
+    installationType: raw.installationType || 'Hand Pump',
+    installationDate: raw.installationDate || '',
+    inspectionDateTime: raw.inspectionDateTime || new Date().toISOString(),
+    inspectorId: raw.inspectorId || 'FGRF-INS-101',
+    inspectorName: raw.inspectorName || 'Field Inspector',
+    inspectorDesignation: raw.inspectorDesignation || 'Inspector',
+    checkpoints: Array.isArray(raw.checkpoints) && raw.checkpoints.length > 0 ? raw.checkpoints : createDefaultCheckpoints(),
+    repairs: Array.isArray(raw.repairs) ? raw.repairs : [],
+    overallCondition: raw.overallCondition || 'Functional',
+    attachedPhotos: raw.attachedPhotos || {},
+    inspectorRemarks: raw.inspectorRemarks || '',
+    inspectorSignature: raw.inspectorSignature || '',
+    inspectionSignDate: raw.inspectionSignDate || '',
+    communityRepName: raw.communityRepName || '',
+    communityRepSignature: raw.communityRepSignature || '',
+    communityRepDate: raw.communityRepDate || '',
+    approvalStatus: raw.approvalStatus || 'Submitted',
+    reviewedBy: raw.reviewedBy,
+    reviewedDate: raw.reviewedDate,
+    reviewRemarks: raw.reviewRemarks,
+    qrCodeDataUrl: raw.qrCodeDataUrl,
+    createdAt: raw.createdAt || new Date().toISOString(),
+  };
 }
 
 export function getCloudSyncEndpoint(): string {
@@ -86,10 +132,17 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     // Support restful-api.dev payload structure
     const data: CloudDatabasePayload = json.data || json;
     
+    const rawAudits = Array.isArray(data.audits) ? data.audits : [];
+    const cleanAudits: AuditRecord[] = [];
+    for (const a of rawAudits) {
+      const sanitized = sanitizeAuditRecord(a);
+      if (sanitized) cleanAudits.push(sanitized);
+    }
+
     return {
-      audits: Array.isArray(data.audits) ? data.audits : [],
-      projects: Array.isArray(data.projects) ? data.projects : [],
-      repairs: Array.isArray(data.repairs) ? data.repairs : [],
+      audits: cleanAudits,
+      projects: Array.isArray(data.projects) ? data.projects.filter((p) => p && p.id) : [],
+      repairs: Array.isArray(data.repairs) ? data.repairs.filter((r) => r && r.id) : [],
       lastUpdated: data.lastUpdated || new Date().toISOString(),
       updatedBy: data.updatedBy
     };
@@ -151,20 +204,26 @@ export async function pushLocalToCloud(
  */
 export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merged: AuditRecord[]; newCount: number } {
   const map = new Map<string, AuditRecord>();
-  local.forEach((a) => map.set(a.id, a));
+  local.forEach((a) => {
+    const s = sanitizeAuditRecord(a);
+    if (s) map.set(s.id, s);
+  });
 
   let newCount = 0;
   remote.forEach((remoteAudit) => {
-    if (!map.has(remoteAudit.id)) {
-      map.set(remoteAudit.id, remoteAudit);
+    const cleanRemote = sanitizeAuditRecord(remoteAudit);
+    if (!cleanRemote) return;
+
+    if (!map.has(cleanRemote.id)) {
+      map.set(cleanRemote.id, cleanRemote);
       newCount++;
     } else {
       // If remote has newer update, keep remote
-      const localAudit = map.get(remoteAudit.id)!;
-      const remoteTime = new Date(remoteAudit.updatedAt || remoteAudit.inspectionDateTime || 0).getTime();
-      const localTime = new Date(localAudit.updatedAt || localAudit.inspectionDateTime || 0).getTime();
+      const localAudit = map.get(cleanRemote.id)!;
+      const remoteTime = new Date(cleanRemote.createdAt || cleanRemote.inspectionDateTime || 0).getTime();
+      const localTime = new Date(localAudit.createdAt || localAudit.inspectionDateTime || 0).getTime();
       if (remoteTime > localTime) {
-        map.set(remoteAudit.id, remoteAudit);
+        map.set(cleanRemote.id, cleanRemote);
       }
     }
   });

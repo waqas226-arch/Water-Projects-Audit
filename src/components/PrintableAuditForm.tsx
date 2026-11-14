@@ -216,7 +216,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                     <span className="font-urdu text-slate-700">معائنہ کی تاریخ اور وقت</span>
                   </div>
                   <div className="col-span-7 p-2 bg-white font-mono">
-                    {new Date(audit.inspectionDateTime).toLocaleString()}
+                    {audit.inspectionDateTime ? new Date(audit.inspectionDateTime).toLocaleString() : 'N/A'}
                   </div>
                 </div>
 
@@ -226,7 +226,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                     <span className="font-urdu text-slate-700">معائنہ کرنے والے کا نام / عہدہ</span>
                   </div>
                   <div className="col-span-7 p-2 bg-white font-medium">
-                    {audit.inspectorName} ({audit.inspectorDesignation})
+                    {audit.inspectorName || 'Field Inspector'} ({audit.inspectorDesignation || 'Inspector'})
                   </div>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                   </tr>
                 </thead>
                 <tbody>
-                  {audit.checkpoints.slice(0, 9).map((cp) => (
+                  {(audit.checkpoints || []).slice(0, 9).map((cp) => (
                     <tr key={cp.id} className="border-b border-slate-300 hover:bg-slate-50/50">
                       <td className="border-r border-slate-300 p-2 text-center font-bold font-mono">
                         {cp.number}
@@ -265,7 +265,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                       </td>
                       <td className="border-r border-slate-300 p-2 text-center align-middle">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
-                          {cp.options.map((opt) => (
+                          {(cp.options || []).map((opt) => (
                             <span
                               key={opt.value}
                               className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded ${
@@ -309,7 +309,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
             <div className="mb-6">
               <table className="w-full border-collapse border border-slate-400 text-xs">
                 <tbody>
-                  {audit.checkpoints.slice(9, 12).map((cp) => (
+                  {(audit.checkpoints || []).slice(9, 12).map((cp) => (
                     <tr key={cp.id} className="border-b border-slate-300">
                       <td className="border-r border-slate-300 p-2 text-center font-bold font-mono w-8">
                         {cp.number}
@@ -320,7 +320,7 @@ export const PrintableAuditForm: React.FC<PrintableAuditFormProps> = ({ audit, o
                       </td>
                       <td className="border-r border-slate-300 p-2 text-center align-middle w-40">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
-                          {cp.options.map((opt) => (
+                          {(cp.options || []).map((opt) => (
                             <span
                               key={opt.value}
                               className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded ${

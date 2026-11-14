@@ -53,12 +53,12 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({ currentUser })
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
-          log.id.toLowerCase().includes(q) ||
-          log.userId.toLowerCase().includes(q) ||
-          log.userName.toLowerCase().includes(q) ||
-          log.ipAddress.toLowerCase().includes(q) ||
-          log.actionType.toLowerCase().includes(q) ||
-          log.actionDescription.toLowerCase().includes(q) ||
+          (log.id || '').toLowerCase().includes(q) ||
+          (log.userId || '').toLowerCase().includes(q) ||
+          (log.userName || '').toLowerCase().includes(q) ||
+          (log.ipAddress || '').toLowerCase().includes(q) ||
+          (log.actionType || '').toLowerCase().includes(q) ||
+          (log.actionDescription || '').toLowerCase().includes(q) ||
           (log.details && log.details.toLowerCase().includes(q));
         if (!match) return false;
       }

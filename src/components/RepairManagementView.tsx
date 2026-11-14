@@ -48,10 +48,10 @@ export const RepairManagementView: React.FC<RepairManagementViewProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
-          r.id.toLowerCase().includes(q) ||
-          r.defectFound.toLowerCase().includes(q) ||
-          r.repairRequired.toLowerCase().includes(q) ||
-          r.responsiblePerson.toLowerCase().includes(q);
+          (r.id || '').toLowerCase().includes(q) ||
+          (r.defectFound || '').toLowerCase().includes(q) ||
+          (r.repairRequired || '').toLowerCase().includes(q) ||
+          (r.responsiblePerson || '').toLowerCase().includes(q);
         if (!match) return false;
       }
       return true;

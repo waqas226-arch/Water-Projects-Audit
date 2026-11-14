@@ -73,7 +73,9 @@ export function getProjects(): WaterProject[] {
       safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
       return SEED_PROJECTS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return SEED_PROJECTS;
+    return parsed.filter((p) => p && typeof p === 'object' && p.id);
   } catch {
     return SEED_PROJECTS;
   }
@@ -90,7 +92,18 @@ export function getAudits(): AuditRecord[] {
       safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
       return SEED_AUDITS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return SEED_AUDITS;
+    return parsed
+      .filter((a) => a && typeof a === 'object' && a.id && a.id !== 'TEST-001')
+      .map((a) => ({
+        ...a,
+        checkpoints: Array.isArray(a.checkpoints) ? a.checkpoints : [],
+        repairs: Array.isArray(a.repairs) ? a.repairs : [],
+        overallCondition: a.overallCondition || 'Functional',
+        approvalStatus: a.approvalStatus || 'Submitted',
+        inspectionDateTime: a.inspectionDateTime || new Date().toISOString(),
+      }));
   } catch {
     return SEED_AUDITS;
   }

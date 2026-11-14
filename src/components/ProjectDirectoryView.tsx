@@ -131,13 +131,13 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
-          p.id.toLowerCase().includes(q) ||
-          p.name.toLowerCase().includes(q) ||
+          (p.id || '').toLowerCase().includes(q) ||
+          (p.name || '').toLowerCase().includes(q) ||
           (p.country && p.country.toLowerCase().includes(q)) ||
-          p.village.toLowerCase().includes(q) ||
-          p.district.toLowerCase().includes(q) ||
-          p.tehsil.toLowerCase().includes(q) ||
-          p.beneficiaryName.toLowerCase().includes(q);
+          (p.village || '').toLowerCase().includes(q) ||
+          (p.district || '').toLowerCase().includes(q) ||
+          (p.tehsil || '').toLowerCase().includes(q) ||
+          (p.beneficiaryName || '').toLowerCase().includes(q);
         if (!match) return false;
       }
       return true;

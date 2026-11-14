@@ -110,14 +110,15 @@ export default function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const targetAuditId = urlParams.get('view_audit');
       if (targetAuditId) {
-        const found = audits.find((a) => a.id.toLowerCase() === targetAuditId.toLowerCase());
+        const needle = targetAuditId.toLowerCase();
+        const found = audits.find((a) => a && a.id && a.id.toLowerCase() === needle);
         if (found) {
           setActivePrintAudit(found);
         } else {
           // Immediately fetch from cloud if not locally cached
           fetchCloudData().then((cloud) => {
-            if (cloud && cloud.audits) {
-              const cloudFound = cloud.audits.find((a) => a.id.toLowerCase() === targetAuditId.toLowerCase());
+            if (cloud && Array.isArray(cloud.audits)) {
+              const cloudFound = cloud.audits.find((a) => a && a.id && a.id.toLowerCase() === needle);
               if (cloudFound) {
                 setActivePrintAudit(cloudFound);
               }

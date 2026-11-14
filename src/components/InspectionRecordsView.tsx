@@ -56,6 +56,7 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
 
   const filteredAudits = useMemo(() => {
     return permittedAudits.filter((a) => {
+      if (!a) return false;
       if (filterProvince !== 'all' && a.province !== filterProvince) return false;
       if (filterStatus !== 'all' && a.approvalStatus !== filterStatus) return false;
       if (filterCondition !== 'all' && a.overallCondition !== filterCondition) return false;
@@ -63,12 +64,12 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match = 
-          a.id.toLowerCase().includes(q) ||
-          a.projectId.toLowerCase().includes(q) ||
-          a.district.toLowerCase().includes(q) ||
-          a.village.toLowerCase().includes(q) ||
-          a.inspectorName.toLowerCase().includes(q) ||
-          a.beneficiaryName.toLowerCase().includes(q);
+          (a.id || '').toLowerCase().includes(q) ||
+          (a.projectId || '').toLowerCase().includes(q) ||
+          (a.district || '').toLowerCase().includes(q) ||
+          (a.village || '').toLowerCase().includes(q) ||
+          (a.inspectorName || '').toLowerCase().includes(q) ||
+          (a.beneficiaryName || '').toLowerCase().includes(q);
         if (!match) return false;
       }
       return true;
@@ -239,39 +240,41 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
                         )}
                         <div>
                           <div className="font-mono font-bold text-emerald-950 flex items-center gap-1">
-                            <span>{audit.id}</span>
+                            <span>{audit.id || 'N/A'}</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono">{audit.formReference}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{audit.formReference || 'FGRF-WTS-AUD-002.00-26'}</div>
                         </div>
                       </div>
                     </td>
 
                     {/* Project & Village */}
                     <td className="p-3.5">
-                      <div className="font-bold text-slate-900">{audit.projectId}</div>
-                      <div className="text-slate-500 truncate max-w-xs">{audit.village}</div>
+                      <div className="font-bold text-slate-900">{audit.projectId || 'N/A'}</div>
+                      <div className="text-slate-500 truncate max-w-xs">{audit.village || 'N/A'}</div>
                     </td>
 
                     {/* District */}
                     <td className="p-3.5">
-                      <div className="font-semibold text-slate-800">{audit.district}</div>
-                      <div className="text-slate-400 text-[10px]">{audit.province}</div>
+                      <div className="font-semibold text-slate-800">{audit.district || 'N/A'}</div>
+                      <div className="text-slate-400 text-[10px]">{audit.province || ''}</div>
                     </td>
 
                     {/* Inspection Date & Inspector */}
                     <td className="p-3.5">
-                      <div className="font-medium text-slate-800">{audit.inspectionDateTime.slice(0, 10)}</div>
-                      <div className="text-slate-500 text-[10px] truncate max-w-[120px]">{audit.inspectorName}</div>
+                      <div className="font-medium text-slate-800">
+                        {audit.inspectionDateTime ? audit.inspectionDateTime.slice(0, 10) : 'N/A'}
+                      </div>
+                      <div className="text-slate-500 text-[10px] truncate max-w-[120px]">{audit.inspectorName || 'Field Inspector'}</div>
                     </td>
 
                     {/* Condition */}
                     <td className="p-3.5">
-                      {getConditionBadge(audit.overallCondition)}
+                      {getConditionBadge(audit.overallCondition || 'Functional')}
                     </td>
 
                     {/* Repairs */}
                     <td className="p-3.5 font-medium">
-                      {audit.repairs && audit.repairs.length > 0 ? (
+                      {Array.isArray(audit.repairs) && audit.repairs.length > 0 ? (
                         <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           {audit.repairs.length} action{audit.repairs.length > 1 ? 's' : ''}
                         </span>
@@ -282,7 +285,7 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
 
                     {/* Approval Status */}
                     <td className="p-3.5">
-                      {getApprovalBadge(audit.approvalStatus)}
+                      {getApprovalBadge(audit.approvalStatus || 'Submitted')}
                     </td>
 
                     {/* Actions */}
@@ -350,19 +353,19 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
             <div className="bg-slate-50 p-3.5 rounded-xl text-xs space-y-1.5 border border-slate-200">
               <div className="flex justify-between">
                 <span className="text-slate-500">Audit Form:</span>
-                <span className="font-mono font-bold text-emerald-900">{reviewingAudit.id}</span>
+                <span className="font-mono font-bold text-emerald-900">{reviewingAudit.id || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Project ID:</span>
-                <span className="font-bold text-slate-800">{reviewingAudit.projectId} ({reviewingAudit.district})</span>
+                <span className="font-bold text-slate-800">{reviewingAudit.projectId || 'N/A'} ({reviewingAudit.district || 'N/A'})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Evaluated Condition:</span>
-                <span className="font-bold text-emerald-800">{reviewingAudit.overallCondition}</span>
+                <span className="font-bold text-emerald-800">{reviewingAudit.overallCondition || 'Functional'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Field Inspector:</span>
-                <span className="font-semibold text-slate-700">{reviewingAudit.inspectorName}</span>
+                <span className="font-semibold text-slate-700">{reviewingAudit.inspectorName || 'Field Inspector'}</span>
               </div>
             </div>
 
@@ -416,12 +419,12 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
             </div>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-              <div className="font-mono font-black text-lg text-emerald-950">{selectedQrAudit.id}</div>
+              <div className="font-mono font-black text-lg text-emerald-950">{selectedQrAudit.id || 'N/A'}</div>
               <div className="text-xs text-slate-600 mt-0.5">
-                Project: <strong>{selectedQrAudit.projectId}</strong> • {selectedQrAudit.district} ({selectedQrAudit.tehsil})
+                Project: <strong>{selectedQrAudit.projectId || 'N/A'}</strong> • {selectedQrAudit.district || 'N/A'} ({selectedQrAudit.tehsil || ''})
               </div>
               <div className="text-[11px] font-semibold text-emerald-800 mt-1">
-                Condition: <span className="bg-emerald-100 px-2 py-0.5 rounded-full">{selectedQrAudit.overallCondition}</span>
+                Condition: <span className="bg-emerald-100 px-2 py-0.5 rounded-full">{selectedQrAudit.overallCondition || 'Functional'}</span>
               </div>
             </div>
 

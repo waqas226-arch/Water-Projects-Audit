@@ -260,7 +260,7 @@ export const PakistanMapView: React.FC<PakistanMapViewProps> = ({
       if (filterDistrict !== 'all' && p.district !== filterDistrict) return false;
       if (filterCondition !== 'all' && p.currentCondition !== filterCondition) return false;
       if (q) {
-        const matchesId = p.id.toLowerCase().includes(q);
+        const matchesId = (p.id || '').toLowerCase().includes(q);
         const matchesVillage = p.village?.toLowerCase().includes(q);
         const matchesBeneficiary = p.beneficiaryName?.toLowerCase().includes(q);
         const matchesTehsil = p.tehsil?.toLowerCase().includes(q);

@@ -79,10 +79,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const match =
-          u.id.toLowerCase().includes(q) ||
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          u.designation.toLowerCase().includes(q) ||
+          (u.id || '').toLowerCase().includes(q) ||
+          (u.name || '').toLowerCase().includes(q) ||
+          (u.email || '').toLowerCase().includes(q) ||
+          (u.designation || '').toLowerCase().includes(q) ||
           (u.district && u.district.toLowerCase().includes(q));
         if (!match) return false;
       }
