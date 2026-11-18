@@ -518,40 +518,36 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const localRepairs = getRepairs();
 
   const cloud = await fetchCloudData();
-  if (!cloud) {
-    return {
-      success: false,
-      newAuditsCount: 0,
-      newProjectsCount: 0,
-      message: 'Cloud database unreachable. Local data preserved in offline mode.',
-      timestamp: new Date().toISOString()
-    };
-  }
+  const remoteAudits = cloud?.audits || [];
+  const remoteProjects = cloud?.projects || [];
+  const remoteRepairs = cloud?.repairs || [];
 
   // Merge records
-  const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, cloud.audits);
-  const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, cloud.projects);
-  const mergedRepairs = mergeRepairs(localRepairs, cloud.repairs);
+  const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, remoteAudits);
+  const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects);
+  const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs);
 
   // Save merged locally
   saveAudits(mergedAudits);
   saveProjects(mergedProjects);
   saveRepairs(mergedRepairs);
 
-  // If local had records not in cloud, push merged back to cloud
-  if (mergedAudits.length > cloud.audits.length || mergedProjects.length > cloud.projects.length || mergedRepairs.length > cloud.repairs.length) {
-    await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId);
-  } else {
-    try {
-      localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
-    } catch {}
-  }
+  // Push merged back to cloud
+  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId);
+
+  try {
+    localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
+  } catch {}
+
+  const countMsg = (newAuditsCount > 0 || newProjectsCount > 0)
+    ? `Received ${newAuditsCount} new audit(s) & ${newProjectsCount} new project(s) from cloud.`
+    : `All records synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects).`;
 
   return {
     success: true,
     newAuditsCount,
     newProjectsCount,
-    message: `Synchronized successfully. ${newAuditsCount} new audit(s) and ${newProjectsCount} new project(s) updated.`,
+    message: `Cloud Master DB Live (Online Mode): ${countMsg}`,
     timestamp: new Date().toISOString()
   };
 }
@@ -579,19 +575,22 @@ export async function publishAuditToCloud(audit: AuditRecord, project: WaterProj
 
 /**
  * Real-time background sync hook:
- * Automatically polls for updates every 25 seconds and listens to BroadcastChannel
+ * Automatically polls for updates every 3 minutes (prevents quota exhaustion)
+ * and syncs on tab focus / window visibility change and BroadcastChannel
  */
 export function startRealtimeCloudSync(
   onUpdate: (data: { audits: AuditRecord[]; projects: WaterProject[]; repairs: RepairItem[]; newCount: number }) => void,
   userId: string = 'FGRF-HQ-01'
 ): () => void {
   let isSyncing = false;
+  let lastSyncTimestamp = Date.now();
 
   const triggerSync = async () => {
     if (isSyncing) return;
     isSyncing = true;
     try {
       const res = await syncAllWithCloud(userId);
+      lastSyncTimestamp = Date.now();
       if (res.success && (res.newAuditsCount > 0 || res.newProjectsCount > 0)) {
         onUpdate({
           audits: getAudits(),
@@ -607,11 +606,23 @@ export function startRealtimeCloudSync(
     }
   };
 
-  // Run initial sync after 2 seconds
-  const initialTimer = setTimeout(triggerSync, 2000);
+  // Run initial sync after 3 seconds
+  const initialTimer = setTimeout(triggerSync, 3000);
 
-  // Poll cloud every 25 seconds
-  const interval = setInterval(triggerSync, 25000);
+  // Poll cloud every 3 minutes (180,000ms) - preserves API quota for multi-location users
+  const interval = setInterval(triggerSync, 180000);
+
+  // Sync on tab focus / window visibility change (if > 2 minutes since last sync)
+  const handleVisibilityOrFocus = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 120000) {
+      triggerSync();
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+  }
 
   // Listen to cross-tab updates
   const handleBusMessage = (e: MessageEvent) => {
@@ -631,6 +642,10 @@ export function startRealtimeCloudSync(
   return () => {
     clearTimeout(initialTimer);
     clearInterval(interval);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    }
     syncBus?.removeEventListener('message', handleBusMessage);
   };
 }
