@@ -114,10 +114,15 @@ export function getLastSyncTime(): string | null {
   }
 }
 
+let rateLimitBlockedUntil = 0;
+
 /**
  * Fetch remote master database records from Cloud
  */
 export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
+  if (Date.now() < rateLimitBlockedUntil) {
+    return null;
+  }
   const endpoint = getCloudSyncEndpoint();
   try {
     const res = await fetch(endpoint, {
@@ -128,7 +133,10 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     });
 
     if (!res.ok) {
-      console.warn(`[FGRF Cloud Sync] Failed to fetch: status ${res.status}`);
+      if (res.status === 405 || res.status === 429) {
+        // Back off for 15 minutes when public free endpoint hits daily quota
+        rateLimitBlockedUntil = Date.now() + 15 * 60 * 1000;
+      }
       return null;
     }
 
@@ -166,6 +174,9 @@ export async function pushLocalToCloud(
   userId: string = 'FGRF-HQ-01'
 ): Promise<boolean> {
   const endpoint = getCloudSyncEndpoint();
+  if (Date.now() < rateLimitBlockedUntil && !endpoint.includes('/api/cloud-sync')) {
+    return false;
+  }
   const payload: CloudDatabasePayload = {
     audits,
     projects,
