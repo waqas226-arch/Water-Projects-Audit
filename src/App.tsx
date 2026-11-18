@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   AuditRecord, 
   InspectionApprovalStatus, 
@@ -52,7 +52,7 @@ import {
   syncAllWithCloud, 
   fetchCloudData 
 } from './utils/cloudSync.ts';
-import { Menu, Cloud, RefreshCw, CheckCircle2, Video } from 'lucide-react';
+import { Menu, Cloud, RefreshCw, CheckCircle2, Video, Bell, Check } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUserState] = useState<UserProfile>(getCurrentUser());
@@ -62,6 +62,8 @@ export default function App() {
   const [audits, setAudits] = useState<AuditRecord[]>(getAudits());
   const [repairs, setRepairs] = useState<RepairItem[]>(getRepairs());
   const [notifications, setNotifications] = useState<AppNotification[]>(getNotifications());
+  const [showHeaderNotifications, setShowHeaderNotifications] = useState<boolean>(false);
+  const unreadNotificationsCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
   const [isVideoTutorialModalOpen, setIsVideoTutorialModalOpen] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
@@ -332,6 +334,13 @@ export default function App() {
     saveNotifications(updated);
   };
 
+  const handleMarkAllNotificationsRead = () => {
+    const updated = notifications.map((n) => ({ ...n, read: true }));
+    setNotifications(updated);
+    saveNotifications(updated);
+    showToast('All notifications marked as read / تمام انتباہات پڑھ لیے گئے');
+  };
+
   // Check if URL is in Public QR Verification Mode (e.g. ?view_audit=AUD-2026-0001)
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const publicAuditId = urlParams ? (urlParams.get('view_audit') || urlParams.get('verify')) : null;
@@ -458,6 +467,113 @@ export default function App() {
               <span className="hidden md:inline">Video Guide</span>
               <span className="font-urdu text-[11px] hidden lg:inline">/ ویڈیو گائیڈ</span>
             </button>
+
+            {/* Notifications Bell in Sticky Top Header (Always visible as per screen movement) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowHeaderNotifications((prev) => !prev)}
+                className="relative flex items-center justify-center p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+                title="Notifications & System Alerts / انتباہات"
+                aria-label="Notifications"
+              >
+                <Bell className="w-4 h-4 text-slate-700" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 bg-rose-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse shadow-xs">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Header Notifications Dropdown */}
+              {showHeaderNotifications && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40 bg-black/10" 
+                    onClick={() => setShowHeaderNotifications(false)} 
+                  />
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 text-slate-900 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-emerald-600" />
+                        <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                          Notifications / انتباہات
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          {unreadNotificationsCount} unread
+                        </span>
+                        {unreadNotificationsCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleMarkAllNotificationsRead}
+                            className="text-[10px] font-bold text-slate-500 hover:text-emerald-700 cursor-pointer underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
+                          No active notifications / کوئی نیا انتباہ نہیں
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={`p-3 text-xs transition-colors hover:bg-slate-50 flex items-start justify-between gap-2.5 ${
+                              !n.read ? 'bg-emerald-50/40 border-l-2 border-emerald-500' : ''
+                            }`}
+                          >
+                            <div className="space-y-0.5 flex-1 min-w-0">
+                              <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                                <span>{n.title}</span>
+                              </div>
+                              <div className="text-slate-600 text-[11px] leading-snug">{n.message}</div>
+                              <div className="text-[10px] text-slate-400 font-mono mt-1">
+                                {new Date(n.timestamp).toLocaleString([], { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                            {!n.read && (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkNotificationRead(n.id)}
+                                className="text-emerald-700 hover:text-emerald-900 p-1 text-[11px] font-bold cursor-pointer hover:bg-emerald-100 rounded-lg transition-colors shrink-0"
+                                title="Mark as read / پڑھ لیا"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">FGRF Water Audit System</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowHeaderNotifications(false)}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition-colors"
+                      >
+                        Close / بند کریں
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <button
               type="button"

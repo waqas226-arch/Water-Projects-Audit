@@ -222,57 +222,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   {/* Notifications Dropdown */}
                   {showNotifications && (
-                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 text-slate-900 z-50 animate-in fade-in duration-150">
-                      <div className="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
-                        <div className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">
-                          Notifications / انتباہات
+                    <>
+                      {/* Click outside backdrop */}
+                      <div 
+                        className="fixed inset-0 z-40 bg-black/10" 
+                        onClick={() => setShowNotifications(false)} 
+                      />
+                      <div className="absolute left-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 text-slate-900 z-50 animate-in fade-in duration-150">
+                        <div className="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                          <div className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">
+                            Notifications / انتباہات
+                          </div>
+                          <span className="text-[10px] text-emerald-700 font-semibold">{unreadCount} unread</span>
                         </div>
-                        <span className="text-[10px] text-emerald-700 font-semibold">{unreadCount} unread</span>
-                      </div>
 
-                      <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
-                        {notifications.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-slate-400">No notifications</div>
-                        ) : (
-                          notifications.map((n) => (
-                            <div
-                              key={n.id}
-                              className={`p-2.5 text-xs transition-colors hover:bg-slate-50 flex items-start justify-between gap-2 ${
-                                !n.read ? 'bg-emerald-50/50' : ''
-                              }`}
-                            >
-                              <div className="space-y-0.5 text-[11px]">
-                                <div className="font-bold text-slate-900">{n.title}</div>
-                                <div className="text-slate-600 leading-snug">{n.message}</div>
-                                <div className="text-[10px] text-slate-400">
-                                  {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-slate-400">No notifications / کوئی انتباہ نہیں</div>
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                className={`p-2.5 text-xs transition-colors hover:bg-slate-50 flex items-start justify-between gap-2 ${
+                                  !n.read ? 'bg-emerald-50/50' : ''
+                                }`}
+                              >
+                                <div className="space-y-0.5 text-[11px]">
+                                  <div className="font-bold text-slate-900">{n.title}</div>
+                                  <div className="text-slate-600 leading-snug">{n.message}</div>
+                                  <div className="text-[10px] text-slate-400">
+                                    {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
                                 </div>
+                                {!n.read && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onMarkNotificationRead(n.id)}
+                                    className="text-emerald-700 hover:text-emerald-900 p-1 text-[10px] font-bold cursor-pointer"
+                                    title="Mark as read"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                )}
                               </div>
-                              {!n.read && (
-                                <button
-                                  type="button"
-                                  onClick={() => onMarkNotificationRead(n.id)}
-                                  className="text-emerald-700 hover:text-emerald-900 p-1 text-[10px] font-bold"
-                                  title="Mark as read"
-                                >
-                                  <Check className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
+                            ))
+                          )}
+                        </div>
 
-                      <div className="px-3 py-1.5 border-t border-slate-100 bg-slate-50 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setShowNotifications(false)}
-                          className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
-                        >
-                          Close
-                        </button>
+                        <div className="px-3 py-1.5 border-t border-slate-100 bg-slate-50 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setShowNotifications(false)}
+                            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                          >
+                            Close / بند کریں
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
 
@@ -301,6 +308,82 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
 
               <div className="flex flex-col gap-1 w-full items-center pt-1 border-t border-slate-800">
+                {/* Collapsed Mode Notifications Bell */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer relative"
+                    title="Notifications / انتباہات"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown in Collapsed Mode (Floats to the right of collapsed bar) */}
+                  {showNotifications && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40 bg-black/10" 
+                        onClick={() => setShowNotifications(false)} 
+                      />
+                      <div className="absolute left-full top-0 ml-2 w-72 sm:w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 text-slate-900 z-50 animate-in fade-in duration-150 text-left">
+                        <div className="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                          <div className="font-bold text-[11px] text-slate-800 uppercase tracking-wider">
+                            Notifications / انتباہات
+                          </div>
+                          <span className="text-[10px] text-emerald-700 font-semibold">{unreadCount} unread</span>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-slate-400">No notifications / کوئی انتباہ نہیں</div>
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                className={`p-2.5 text-xs transition-colors hover:bg-slate-50 flex items-start justify-between gap-2 ${
+                                  !n.read ? 'bg-emerald-50/50' : ''
+                                }`}
+                              >
+                                <div className="space-y-0.5 text-[11px]">
+                                  <div className="font-bold text-slate-900">{n.title}</div>
+                                  <div className="text-slate-600 leading-snug">{n.message}</div>
+                                  <div className="text-[10px] text-slate-400">
+                                    {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                                {!n.read && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onMarkNotificationRead(n.id)}
+                                    className="text-emerald-700 hover:text-emerald-900 p-1 text-[10px] font-bold cursor-pointer"
+                                    title="Mark as read"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        <div className="px-3 py-1.5 border-t border-slate-100 bg-slate-50 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setShowNotifications(false)}
+                            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                          >
+                            Close / بند کریں
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={onOpenSettings}
