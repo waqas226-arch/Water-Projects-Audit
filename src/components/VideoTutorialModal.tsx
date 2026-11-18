@@ -37,74 +37,82 @@ const chapters: Chapter[] = [
   {
     id: 1,
     timeSeconds: 0,
-    titleEn: '1. Vision & Architecture',
-    titleUrdu: '۱. تصور، بنیادی ڈھانچہ اور منصوبہ بندی',
+    titleEn: 'Intro: Author & Why Built',
+    titleUrdu: 'تعارف: مصنف (سید وقاص) اور سسٹم کا مقصد',
     icon: <Sparkles className="w-4 h-4 text-emerald-400" />,
-    summary: 'Conceived and architected by Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF). Centralized digital governance replacing paper audits.'
+    summary: 'Conceived and architected by Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF). Built to eliminate paper-based checklists and provide real-time digital oversight across Pakistan.'
   },
   {
     id: 2,
-    timeSeconds: 5.4,
-    titleEn: '2. Role-Based Access Control',
-    titleUrdu: '۲. صارفین کی تصدیق اور اختیارات کا تحفظ',
+    timeSeconds: 38.4,
+    titleEn: 'Step 1: Log On to System',
+    titleUrdu: 'مرحلہ ۱: سسٹم میں لاگ ان اور اختیارات',
     icon: <ShieldCheck className="w-4 h-4 text-purple-400" />,
-    summary: 'Granular roles: Super Admin, Coordinator, Inspector, Repair Team. Dynamic tab permissions and secure session isolation.'
+    summary: 'Enter User ID (HQ-ADMIN or Inspector ID) and PIN 1234. Isolated role-based permissions protecting sensitive organizational tools.'
   },
   {
     id: 3,
-    timeSeconds: 10.8,
-    titleEn: '3. Master Projects Directory',
-    titleUrdu: '۳. ماسٹر واٹر پراجیکٹس ڈائریکٹری',
+    timeSeconds: 63.2,
+    titleEn: 'Step 2: Executive Dashboard',
+    titleUrdu: 'مرحلہ ۲: ایگزیکٹو ڈیش بورڈ اور لائیو انڈیکیٹرز',
     icon: <Layers className="w-4 h-4 text-blue-400" />,
-    summary: 'Catalog of hand pumps, tube wells, and filtration plants across Pakistan. Filter by Province, District, Tehsil, and operational status.'
+    summary: 'Review national KPI statistics: total installations, operational percentages, and immediate repair alerts.'
   },
   {
     id: 4,
-    timeSeconds: 16.2,
-    titleEn: '4. 12-Point Inspection Form',
-    titleUrdu: '۴. ۱۲ نکاتی فیلڈ آڈٹ فارم (FGRF-WTS-AUD-002.00-26)',
-    icon: <FileText className="w-4 h-4 text-teal-400" />,
-    summary: 'Standard form FGRF-WTS-AUD-002.00-26 with GPS coordinates, defect logging, and photo/video evidence capture.'
+    timeSeconds: 83.0,
+    titleEn: 'Step 3: Master Projects Directory',
+    titleUrdu: 'مرحلہ ۳: ماسٹر پراجیکٹس ڈائریکٹری اور فلٹرز',
+    icon: <Layers className="w-4 h-4 text-teal-400" />,
+    summary: 'Search and filter water schemes by Province, District, Tehsil, and Union Council. Water table depth metrics and donor attribution.'
   },
   {
     id: 5,
-    timeSeconds: 21.6,
-    titleEn: '5. Real-Time Cloud Master Sync',
-    titleUrdu: '۵. کلاؤڈ ماسٹر ڈیٹا بیس اور لائیو ہم آہنگی',
-    icon: <Cloud className="w-4 h-4 text-sky-400" />,
-    summary: 'Multi-location real-time sync mesh. Field records saved in remote districts synchronize automatically to HQ Super Admin.'
+    timeSeconds: 101.4,
+    titleEn: 'Step 4: 12-Point Field Inspection Form',
+    titleUrdu: 'مرحلہ ۴: ۱۲ نکاتی فیلڈ آڈٹ فارم (FGRF-WTS-AUD-002.00-26)',
+    icon: <FileText className="w-4 h-4 text-emerald-400" />,
+    summary: 'Official standard Form FGRF-WTS-AUD-002.00-26. Auto-captures GPS coordinates, audits 12 components, and uploads live photos and videos.'
   },
   {
     id: 6,
-    timeSeconds: 27.0,
-    titleEn: '6. Maintenance & Repair Orders',
-    titleUrdu: '۶. مرمت اور بحالی کے ورک آرڈرز',
-    icon: <Wrench className="w-4 h-4 text-amber-400" />,
-    summary: 'Automated repair ticket generation, priority levels (High/Medium/Low), and before/after repair photographic verification.'
+    timeSeconds: 126.5,
+    titleEn: 'Step 5: Central Cloud Master DB Sync',
+    titleUrdu: 'مرحلہ ۵: کلاؤڈ ماسٹر ڈیٹا بیس اور خودکار ہم آہنگی',
+    icon: <Cloud className="w-4 h-4 text-sky-400" />,
+    summary: 'Saved inspections instantly broadcast to HQ central master database in real time without manual file transfer.'
   },
   {
     id: 7,
-    timeSeconds: 32.4,
-    titleEn: '7. GIS Satellite Map Analytics',
-    titleUrdu: '۷. انٹرایکٹو جی آئی ایس نقشہ اور تجزیات',
-    icon: <MapPin className="w-4 h-4 text-rose-400" />,
-    summary: 'Interactive Leaflet GIS map with satellite imagery, color-coded functional status pins, and water table depth markers.'
+    timeSeconds: 145.7,
+    titleEn: 'Step 6: Defect Logging & Repair Orders',
+    titleUrdu: 'مرحلہ ۶: مرمت و بحالی کے ورک آرڈرز',
+    icon: <Wrench className="w-4 h-4 text-amber-400" />,
+    summary: 'Defective components auto-generate repair work orders (High/Medium/Low priority). Crews upload post-repair photo proof.'
   },
   {
     id: 8,
-    timeSeconds: 37.8,
-    titleEn: '8. Standalone Public QR Scans',
-    titleUrdu: '۸. موبائل سے پبلک کیو آر کوڈ اسکیننگ اور تصدیق',
-    icon: <QrCode className="w-4 h-4 text-emerald-400" />,
-    summary: 'Zero-login required on site plaque scans (?view_audit=...). Opens 2-Page Verified Certificate with live photos while protecting app login.'
+    timeSeconds: 163.6,
+    titleEn: 'Step 7: Interactive Pakistan GIS Map',
+    titleUrdu: 'مرحلہ ۷: انٹرایکٹو جی آئی ایس سیٹلائٹ نقشہ',
+    icon: <MapPin className="w-4 h-4 text-rose-400" />,
+    summary: 'Leaflet satellite map of Pakistan. Click colored pins to view project operational score, water table depth, and audit history.'
   },
   {
     id: 9,
-    timeSeconds: 43.2,
-    titleEn: '9. Official Launch & Governance',
-    titleUrdu: '۹. باضابطہ آغاز اور شعبہ جاتی رہنمائی',
+    timeSeconds: 179.1,
+    titleEn: 'Step 8: Standalone Public QR Plaque Scans',
+    titleUrdu: 'مرحلہ ۸: پبلک کیو آر کوڈ سے عوامی تصدیق',
+    icon: <QrCode className="w-4 h-4 text-emerald-400" />,
+    summary: 'Zero-login required on physical plaque QR scans (?view_audit=...). Opens 2-Page Verified Certificate with live photos while protecting app login.'
+  },
+  {
+    id: 10,
+    timeSeconds: 198.6,
+    titleEn: 'Step 9: Reports & Governance',
+    titleUrdu: 'مرحلہ ۹: رپورٹس، ایکسل ایکسپورٹ اور شعبہ جاتی رہنمائی',
     icon: <Award className="w-4 h-4 text-yellow-400" />,
-    summary: '100% verified across all 12 modules on GitHub Pages. Dedicated leadership by Syed Waqas and the FGRF ERP team.'
+    summary: 'Export filtered audit registers and repair work orders to Excel or printable PDF. Enterprise oversight led by Syed Waqas.'
   }
 ];
 
@@ -161,12 +169,14 @@ export const VideoTutorialModal: React.FC<VideoTutorialModalProps> = ({ isOpen, 
               <Video className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Official System Video Guide & Training
                 </h2>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-mono px-2 py-0.5 rounded border border-emerald-400/30">
-                  HD Tutorial
+                <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded border border-emerald-400/30 flex items-center gap-1">
+                  <span>🔊 Voice-Over</span>
+                  <span>•</span>
+                  <span>One-Screen Mode</span>
                 </span>
               </div>
               <p className="text-xs text-emerald-300/90 font-medium">
