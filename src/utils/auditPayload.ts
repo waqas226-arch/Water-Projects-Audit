@@ -104,8 +104,8 @@ export function encodeAuditForQr(audit: AuditRecord): string {
     dt: audit.inspectionDateTime,
     in: audit.inspectorName,
     ids: audit.inspectorDesignation || 'Field Inspector',
-    cp: (audit.checkpoints || []).map(c => [c.id, c.status, c.remarks || '']),
-    rp: (audit.repairs || []).map(r => [r.item, r.action || '', r.estimatedCost || 0, r.status || 'Pending']),
+    cp: (audit.checkpoints || []).map(c => [c.id, c.currentStatus, c.remarks || '']),
+    rp: (audit.repairs || []).map(r => [r.defectFound || '', r.repairRequired || '', 0, r.status || 'Pending']),
     oc: audit.overallCondition,
     rm: audit.inspectorRemarks || '',
     is: audit.inspectorSignature ? 'VERIFIED' : '',
@@ -139,7 +139,7 @@ export function decodeAuditFromQr(payloadStr: string): AuditRecord | null {
       if (match) {
         return {
           ...def,
-          status: (match[1] as any) || def.status,
+          currentStatus: (match[1] as any) || def.currentStatus,
           remarks: match[2] || def.remarks
         };
       }
@@ -147,17 +147,13 @@ export function decodeAuditFromQr(payloadStr: string): AuditRecord | null {
     });
 
     // Expand repairs
-    const repairs: RepairItem[] = (c.rp || []).map(([item, action, estimatedCost, status], idx) => ({
+    const repairs: RepairItem[] = (c.rp || []).map(([defectFound, repairRequired, _cost, status], idx) => ({
       id: `REP-QR-${c.i}-${idx + 1}`,
-      auditId: c.i,
-      projectId: c.p,
-      item,
-      action,
-      estimatedCost,
-      status: (status as any) || 'Pending',
+      defectFound: defectFound || 'Defect noted during inspection',
+      repairRequired: repairRequired || 'Repair and maintenance required',
       responsiblePerson: 'Local Field Maintenance Team',
       targetDate: c.dt?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-      createdAt: c.dt || new Date().toISOString()
+      status: (status as any) || 'Pending'
     }));
 
     const audit: AuditRecord = {
@@ -235,32 +231,28 @@ export const OFFICIAL_PRECONFIGURED_AUDITS: Record<string, AuditRecord> = {
     inspectorName: 'Syed Waqas',
     inspectorDesignation: 'Manager MIS (Data Management & ERP)',
     checkpoints: createDefaultCheckpoints().map(cp => {
-      if (cp.id === 1) return { ...cp, status: 'Yes', remarks: 'Water discharge rate verified at 22 Liters/minute (Optimum).' };
-      if (cp.id === 2) return { ...cp, status: 'Yes', remarks: 'Platform apron concrete fully intact without cracks or stagnant water.' };
-      if (cp.id === 3) return { ...cp, status: 'Yes', remarks: 'Drainage channel flowing smoothly to 4-meter soak pit.' };
-      if (cp.id === 4) return { ...cp, status: 'OK', remarks: 'Clear and transparent water output, zero odor or turbidity.' };
-      if (cp.id === 5) return { ...cp, status: 'Yes', remarks: 'Mechanical handle and fulcrum pin in smooth working order.' };
-      if (cp.id === 6) return { ...cp, status: 'Yes', remarks: 'Heavy duty cylinder seal and leather bucket fully functional.' };
-      if (cp.id === 7) return { ...cp, status: 'Yes', remarks: 'Pump base foundation bolts firmly secured.' };
-      if (cp.id === 8) return { ...cp, status: 'Yes', remarks: 'Surrounding hygiene satisfactory; livestock fencing maintained.' };
-      if (cp.id === 9) return { ...cp, status: 'Yes', remarks: 'Official FGRF donor memorial metal plaque clearly mounted and readable.' };
-      if (cp.id === 10) return { ...cp, status: 'Yes', remarks: '3-Member Village Water Committee active and trained on basic maintenance.' };
-      if (cp.id === 11) return { ...cp, status: 'Yes', remarks: 'GPS geo-coordinates confirmed on site with digital positioning.' };
-      if (cp.id === 12) return { ...cp, status: 'Yes', remarks: 'Beneficiary satisfaction confirmed by community members.' };
+      if (cp.id === 1) return { ...cp, currentStatus: 'Yes', remarks: 'Water discharge rate verified at 22 Liters/minute (Optimum).' };
+      if (cp.id === 2) return { ...cp, currentStatus: 'Yes', remarks: 'Platform apron concrete fully intact without cracks or stagnant water.' };
+      if (cp.id === 3) return { ...cp, currentStatus: 'Yes', remarks: 'Drainage channel flowing smoothly to 4-meter soak pit.' };
+      if (cp.id === 4) return { ...cp, currentStatus: 'OK', remarks: 'Clear and transparent water output, zero odor or turbidity.' };
+      if (cp.id === 5) return { ...cp, currentStatus: 'Yes', remarks: 'Mechanical handle and fulcrum pin in smooth working order.' };
+      if (cp.id === 6) return { ...cp, currentStatus: 'Yes', remarks: 'Heavy duty cylinder seal and leather bucket fully functional.' };
+      if (cp.id === 7) return { ...cp, currentStatus: 'Yes', remarks: 'Pump base foundation bolts firmly secured.' };
+      if (cp.id === 8) return { ...cp, currentStatus: 'Yes', remarks: 'Surrounding hygiene satisfactory; livestock fencing maintained.' };
+      if (cp.id === 9) return { ...cp, currentStatus: 'Yes', remarks: 'Official FGRF donor memorial metal plaque clearly mounted and readable.' };
+      if (cp.id === 10) return { ...cp, currentStatus: 'Yes', remarks: '3-Member Village Water Committee active and trained on basic maintenance.' };
+      if (cp.id === 11) return { ...cp, currentStatus: 'Yes', remarks: 'GPS geo-coordinates confirmed on site with digital positioning.' };
+      if (cp.id === 12) return { ...cp, currentStatus: 'Yes', remarks: 'Beneficiary satisfaction confirmed by community members.' };
       return cp;
     }),
     repairs: [
       {
         id: 'REP-2026-0001',
-        auditId: 'AUD-2026-0001',
-        projectId: 'FGRF-WTS-SND-004',
-        item: 'Preventative Handle Bush Lubrication & Seal Inspection',
-        action: 'Applied food-grade mechanical grease and tightened pivot bolt locknut',
-        estimatedCost: 1500,
+        defectFound: 'Preventative Handle Bush Lubrication & Seal Inspection',
+        repairRequired: 'Applied food-grade mechanical grease and tightened pivot bolt locknut',
         status: 'Done',
         responsiblePerson: 'Zubair Raza (Technical Supervisor)',
-        targetDate: '2026-11-14',
-        createdAt: '2026-11-14T10:00:00.000Z'
+        targetDate: '2026-11-14'
       }
     ],
     overallCondition: 'Functional',

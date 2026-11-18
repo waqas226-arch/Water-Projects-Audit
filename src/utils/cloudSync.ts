@@ -81,6 +81,7 @@ export function sanitizeAuditRecord(raw: any): AuditRecord | null {
     reviewRemarks: raw.reviewRemarks,
     qrCodeDataUrl: raw.qrCodeDataUrl,
     createdAt: raw.createdAt || new Date().toISOString(),
+    updatedAt: raw.updatedAt || raw.createdAt || new Date().toISOString(),
   };
 }
 
