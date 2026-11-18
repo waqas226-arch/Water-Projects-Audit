@@ -21,7 +21,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // Central Cloud Master Database Endpoints (Unlimited Local/Cloud Persistence)
-const DB_FILE = path.join(__dirname, 'master_cloud_database.json');
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const DB_FILE = path.join(DATA_DIR, 'master_cloud_database.json');
 function readMasterDb() {
   try {
     if (fs.existsSync(DB_FILE)) {

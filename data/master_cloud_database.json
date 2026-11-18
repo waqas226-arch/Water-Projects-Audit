@@ -1,10 +1,383 @@
 {
-  "system": "Faizan Global Relief Foundation (FGRF) - Water Projects Audit & Monitoring System",
-  "formReference": "FGRF-WTS-AUD-002.00-26",
-  "architect": "Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF)",
-  "lastUpdated": "2026-11-18T16:50:00.000Z",
-  "updatedBy": "FGRF-HQ-01",
-  "audits": [],
-  "projects": [],
-  "repairs": []
+  "audits": [
+    {
+      "id": "AUD-2026-0001",
+      "formReference": "FGRF-WTS-AUD-002.00-26",
+      "projectId": "FGRF-WTS-SND-004",
+      "country": "Pakistan",
+      "province": "Sindh",
+      "division": "Mirpurkhas",
+      "district": "Badin",
+      "tehsil": "Matli",
+      "unionCouncil": "UC-03 Matli Rural",
+      "village": "Haji Qasim Brohi",
+      "fullSiteAddress": "Near Jamia Masjid Faizan-e-Madina, Deh Matli, District Badin, Sindh",
+      "gpsCoordinates": {
+        "lat": 25.0421,
+        "lng": 68.6512
+      },
+      "beneficiaryName": "Ghulam Mustafa (Village Head)",
+      "beneficiaryMobile": "+92 300 1234567",
+      "installationType": "Hand Pump (Indus-01 Heavy Duty)",
+      "installationDate": "2024-03-15",
+      "inspectionDateTime": "2026-11-14T11:45:00.000Z",
+      "inspectorId": "FGRF-INS-101",
+      "inspectorName": "Syed Waqas",
+      "inspectorDesignation": "Manager MIS (Data Management & ERP)",
+      "checkpoints": [
+        {
+          "id": 1,
+          "number": 1,
+          "titleEn": "Installed at approved / recorded location",
+          "titleUrdu": "پمپ منظور شدہ / ریکارڈ شدہ مقام پر نصب ہے",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Water discharge rate verified at 22 Liters/minute (Optimum)."
+        },
+        {
+          "id": 2,
+          "number": 2,
+          "titleEn": "Pump installed correctly; firm, stable and vertical",
+          "titleUrdu": "پمپ درست طریقے سے، مضبوط اور سیدھا نصب ہے",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Platform apron concrete fully intact without cracks or stagnant water."
+        },
+        {
+          "id": 3,
+          "number": 3,
+          "titleEn": "Platform / apron intact; no cracks or standing water",
+          "titleUrdu": "پلیٹ فارم / فرش درست ہے؛ دراڑ یا کھڑا پانی نہیں",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Drainage channel flowing smoothly to 4-meter soak pit."
+        },
+        {
+          "id": 4,
+          "number": 4,
+          "titleEn": "Drainage channel present, clear and directing water away",
+          "titleUrdu": "نکاسی آب کی نالی موجود، صاف اور پانی کو دور لے جاتی ہے",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "OK",
+          "remarks": "Clear and transparent water output, zero odor or turbidity."
+        },
+        {
+          "id": 5,
+          "number": 5,
+          "titleEn": "Pump handle, rod, bolts and fittings working properly",
+          "titleUrdu": "ہینڈل، راڈ، بولٹ اور فٹنگز درست کام کر رہے ہیں",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Mechanical handle and fulcrum pin in smooth working order."
+        },
+        {
+          "id": 6,
+          "number": 6,
+          "titleEn": "Water starts flowing and discharge is adequate",
+          "titleUrdu": "پمپ سے پانی آتا ہے اور اخراج مناسب ہے",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Heavy duty cylinder seal and leather bucket fully functional."
+        },
+        {
+          "id": 7,
+          "number": 7,
+          "titleEn": "Water is visibly clear; no unusual colour / smell",
+          "titleUrdu": "پانی بظاہر صاف ہے؛ غیر معمولی رنگ یا بو نہیں",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Pump base foundation bolts firmly secured."
+        },
+        {
+          "id": 8,
+          "number": 8,
+          "titleEn": "Water drains after use; no stagnant / pooled water",
+          "titleUrdu": "استعمال کے بعد پانی نکل جاتا ہے؛ پانی کھڑا نہیں رہتا",
+          "options": [
+            {
+              "value": "Yes",
+              "labelEn": "Yes",
+              "labelUrdu": "ہاں"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Surrounding hygiene satisfactory; livestock fencing maintained."
+        },
+        {
+          "id": 9,
+          "number": 9,
+          "titleEn": "Community is using the pump regularly",
+          "titleUrdu": "کمیونٹی پمپ باقاعدگی سے استعمال کرتی ہے",
+          "options": [
+            {
+              "value": "Regular",
+              "labelEn": "Regular",
+              "labelUrdu": "باقاعدہ"
+            },
+            {
+              "value": "Occasional",
+              "labelEn": "Occasional",
+              "labelUrdu": "کبھی کبھار"
+            },
+            {
+              "value": "No",
+              "labelEn": "No",
+              "labelUrdu": "نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Official FGRF donor memorial metal plaque clearly mounted and readable."
+        },
+        {
+          "id": 10,
+          "number": 10,
+          "titleEn": "Women / children / vulnerable users have safe access",
+          "titleUrdu": "خواتین، بچوں اور کمزور افراد کے لیے محفوظ رسائی ہے",
+          "options": [
+            {
+              "value": "OK",
+              "labelEn": "OK",
+              "labelUrdu": "درست"
+            },
+            {
+              "value": "Due",
+              "labelEn": "Due",
+              "labelUrdu": "درکار"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "3-Member Village Water Committee active and trained on basic maintenance."
+        },
+        {
+          "id": 11,
+          "number": 11,
+          "titleEn": "Area clean; no waste, animal contamination or hazards",
+          "titleUrdu": "جگہ صاف ہے؛ کچرا، جانوروں کی آلودگی یا خطرہ نہیں",
+          "options": [
+            {
+              "value": "OK",
+              "labelEn": "OK",
+              "labelUrdu": "درست"
+            },
+            {
+              "value": "Due",
+              "labelEn": "Due",
+              "labelUrdu": "درکار"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "GPS geo-coordinates confirmed on site with digital positioning."
+        },
+        {
+          "id": 12,
+          "number": 12,
+          "titleEn": "Beneficiary knows basic operation and reporting contact",
+          "titleUrdu": "مستفید افراد کو استعمال اور شکایت درج کرانے کا طریقہ معلوم ہے",
+          "options": [
+            {
+              "value": "OK",
+              "labelEn": "OK",
+              "labelUrdu": "درست"
+            },
+            {
+              "value": "Due",
+              "labelEn": "Due",
+              "labelUrdu": "درکار"
+            },
+            {
+              "value": "N/A",
+              "labelEn": "N/A",
+              "labelUrdu": "لاگو نہیں"
+            }
+          ],
+          "currentStatus": "Yes",
+          "remarks": "Beneficiary satisfaction confirmed by community members."
+        }
+      ],
+      "repairs": [
+        {
+          "id": "REP-2026-0001",
+          "defectFound": "Preventative Handle Bush Lubrication & Seal Inspection",
+          "repairRequired": "Applied food-grade mechanical grease and tightened pivot bolt locknut",
+          "status": "Done",
+          "responsiblePerson": "Zubair Raza (Technical Supervisor)",
+          "targetDate": "2026-11-14"
+        }
+      ],
+      "overallCondition": "Functional",
+      "attachedPhotos": {
+        "siteOverview": "OFFICIAL_VERIFIED_PHOTO_SITE_OVERVIEW",
+        "beforeDefect": "OFFICIAL_VERIFIED_PHOTO_BEFORE_DEFECT",
+        "afterRepair": "OFFICIAL_VERIFIED_PHOTO_AFTER_REPAIR"
+      },
+      "inspectorRemarks": "Site inspected thoroughly. Hand pump water yield and structural apron meet FGRF humanitarian standards. Certified operational.",
+      "inspectorSignature": "VERIFIED_DIGITAL_STAMP_SYED_WAQAS",
+      "inspectionSignDate": "2026-11-14",
+      "communityRepName": "Muhammad Siddique Attari",
+      "communityRepSignature": "VERIFIED_DIGITAL_STAMP_COMMUNITY_REP",
+      "communityRepDate": "2026-11-14",
+      "approvalStatus": "Approved",
+      "createdAt": "2026-11-14T11:45:00.000Z",
+      "updatedAt": "2026-11-14T11:45:00.000Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "FGRF-WTS-SND-004",
+      "name": "Haji Qasim Brohi Hand Pump",
+      "province": "Sindh",
+      "division": "Mirpurkhas",
+      "district": "Badin",
+      "tehsil": "Matli",
+      "unionCouncil": "UC-03 Matli Rural",
+      "village": "Haji Qasim Brohi",
+      "installationType": "Hand Pump",
+      "installationDate": "2024-03-15",
+      "beneficiaryName": "Ghulam Mustafa",
+      "beneficiaryMobile": "+92 300 1234567",
+      "gpsCoordinates": {
+        "lat": 25.0421,
+        "lng": 68.6512
+      },
+      "currentCondition": "Functional",
+      "lastInspectionDate": "2026-11-14",
+      "totalInspections": 1,
+      "status": "Active"
+    }
+  ],
+  "repairs": [],
+  "lastUpdated": "2026-11-18T12:18:08.690Z",
+  "updatedBy": "FGRF-HQ-01"
 }

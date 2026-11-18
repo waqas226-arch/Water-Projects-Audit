@@ -46,6 +46,7 @@ import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
 import { PublicAuditVerificationView } from './components/PublicAuditVerificationView.tsx';
 import { VideoTutorialModal } from './components/VideoTutorialModal.tsx';
+import { CloudMasterDbModal } from './components/CloudMasterDbModal.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
@@ -94,6 +95,7 @@ export default function App() {
 
   // Cloud Sync state
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
+  const [isCloudModalOpen, setIsCloudModalOpen] = useState<boolean>(false);
   const [lastSyncDisplay, setLastSyncDisplay] = useState<string>('Live Connected');
 
   // Real-Time Cloud Master Database Live Sync (Multi-location field staff <-> HQ Super Admin)
@@ -439,22 +441,31 @@ export default function App() {
           {/* Top Right Quick Profile & Settings & Live Cloud Master DB */}
           <div className="flex items-center gap-2">
             {/* Live Cloud Master DB Real-time Sync Status & Manual Trigger */}
-            <button
-              type="button"
-              onClick={handleManualCloudSync}
-              disabled={isCloudSyncing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 transition-colors text-xs font-bold shadow-2xs cursor-pointer"
-              title="Central Cloud Master Database - Multi-Device Live Sync / مرکزی کلاؤڈ ڈیٹا بیس سنک"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <Cloud className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="hidden sm:inline">Cloud Master DB:</span>
-              <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
-              <RefreshCw className={`w-3 h-3 text-emerald-600 ${isCloudSyncing ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center rounded-xl bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-300 text-emerald-950 transition-colors text-xs font-bold shadow-2xs overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsCloudModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-emerald-200/50 transition-colors cursor-pointer"
+                title="Central Cloud Master Database - Multi-Device Live Sync / مرکزی کلاؤڈ ڈیٹا بیس سنک (Click to Open Control Center)"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <Cloud className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="hidden sm:inline">Cloud Master DB:</span>
+                <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleManualCloudSync}
+                disabled={isCloudSyncing}
+                title="Quick Sync Now / فوری سنک کریں"
+                className="px-2 py-1.5 border-l border-emerald-300/80 hover:bg-emerald-200/60 transition-colors text-emerald-700 hover:text-emerald-900 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
 
             {/* Video Tutorial Guide Action */}
             <button
@@ -792,6 +803,23 @@ export default function App() {
       <VideoTutorialModal
         isOpen={isVideoTutorialModalOpen}
         onClose={() => setIsVideoTutorialModalOpen(false)}
+      />
+
+      {/* Central Cloud Master DB Control Center Modal */}
+      <CloudMasterDbModal
+        isOpen={isCloudModalOpen}
+        onClose={() => setIsCloudModalOpen(false)}
+        currentUser={currentUser}
+        audits={audits}
+        projects={projects}
+        repairs={repairs}
+        onDataUpdated={() => {
+          setAudits(getAudits());
+          setProjects(getProjects());
+          setRepairs(getRepairs());
+          setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }}
+        showToast={showToast}
       />
     </div>
   );
