@@ -43,13 +43,14 @@ import { LoginScreen } from './components/LoginScreen.tsx';
 import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
 import { PublicAuditVerificationView } from './components/PublicAuditVerificationView.tsx';
+import { VideoTutorialModal } from './components/VideoTutorialModal.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
   syncAllWithCloud, 
   fetchCloudData 
 } from './utils/cloudSync.ts';
-import { Menu, Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Menu, Cloud, RefreshCw, CheckCircle2, Video } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUserState] = useState<UserProfile>(getCurrentUser());
@@ -59,6 +60,7 @@ export default function App() {
   const [audits, setAudits] = useState<AuditRecord[]>(getAudits());
   const [repairs, setRepairs] = useState<RepairItem[]>(getRepairs());
   const [notifications, setNotifications] = useState<AppNotification[]>(getNotifications());
+  const [isVideoTutorialModalOpen, setIsVideoTutorialModalOpen] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem('fgrf_auth_session') === 'true';
@@ -330,18 +332,25 @@ export default function App() {
   // Before displaying software, first display Log On User ID on right and FGRF Logo on left
   if (!isAuthenticated) {
     return (
-      <LoginScreen
-        users={users}
-        onLogin={(user) => {
-          handleSelectUser(user);
-          try {
-            sessionStorage.setItem('fgrf_auth_session', 'true');
-          } catch {}
-          setIsAuthenticated(true);
-          const defaultTab = getDefaultTabForUser(user);
-          setCurrentTab(defaultTab);
-        }}
-      />
+      <>
+        <LoginScreen
+          users={users}
+          onLogin={(user) => {
+            handleSelectUser(user);
+            try {
+              sessionStorage.setItem('fgrf_auth_session', 'true');
+            } catch {}
+            setIsAuthenticated(true);
+            const defaultTab = getDefaultTabForUser(user);
+            setCurrentTab(defaultTab);
+          }}
+          onOpenVideoTutorial={() => setIsVideoTutorialModalOpen(true)}
+        />
+        <VideoTutorialModal
+          isOpen={isVideoTutorialModalOpen}
+          onClose={() => setIsVideoTutorialModalOpen(false)}
+        />
+      </>
     );
   }
 
@@ -358,6 +367,7 @@ export default function App() {
         notifications={notifications}
         onMarkNotificationRead={handleMarkNotificationRead}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenVideoTutorial={() => setIsVideoTutorialModalOpen(true)}
         onLogout={() => {
           try {
             sessionStorage.removeItem('fgrf_auth_session');
@@ -418,6 +428,18 @@ export default function App() {
               <span className="hidden sm:inline">Cloud Master DB:</span>
               <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
               <RefreshCw className={`w-3 h-3 text-emerald-600 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+            </button>
+
+            {/* Video Tutorial Guide Action */}
+            <button
+              type="button"
+              onClick={() => setIsVideoTutorialModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold transition-all shadow-xs cursor-pointer"
+              title="Watch Video Tutorial / ویڈیو گائیڈ دیکھیں"
+            >
+              <Video className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden md:inline">Video Guide</span>
+              <span className="font-urdu text-[11px] hidden lg:inline">/ ویڈیو گائیڈ</span>
             </button>
 
             <button
@@ -629,6 +651,12 @@ export default function App() {
       <SoftwareRightsModal
         isOpen={isRightsModalOpen}
         onClose={() => setIsRightsModalOpen(false)}
+      />
+
+      {/* Official System Video Tutorial Guide Modal */}
+      <VideoTutorialModal
+        isOpen={isVideoTutorialModalOpen}
+        onClose={() => setIsVideoTutorialModalOpen(false)}
       />
     </div>
   );

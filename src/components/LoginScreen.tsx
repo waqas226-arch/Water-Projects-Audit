@@ -8,7 +8,8 @@ import {
   Building2, 
   FileCheck2, 
   ShieldCheck, 
-  Sparkles
+  Sparkles,
+  Video
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types/index.ts';
 import { getDefaultRightsForRole } from '../utils/auditLogic.ts';
@@ -18,9 +19,10 @@ import { detectClientIp, logUserActivity } from '../utils/storage.ts';
 interface LoginScreenProps {
   users: UserProfile[];
   onLogin: (user: UserProfile) => void;
+  onOpenVideoTutorial?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onOpenVideoTutorial }) => {
   const [userIdInput, setUserIdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -304,6 +306,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
                 <span className="font-urdu text-emerald-100 text-xs">/ لاگ ان کریں</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
+
+              {/* Video Tutorial Launch Button */}
+              {onOpenVideoTutorial && (
+                <button
+                  type="button"
+                  onClick={onOpenVideoTutorial}
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:text-white font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <Video className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Watch Video Guide / ویڈیو گائیڈ دیکھیں</span>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-mono">HD</span>
+                </button>
+              )}
 
             </form>
 

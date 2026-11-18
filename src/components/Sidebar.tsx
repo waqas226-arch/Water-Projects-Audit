@@ -22,7 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  Sparkles
+  Sparkles,
+  Video
 } from 'lucide-react';
 import { AppNotification, NavTab, UserProfile, UserRole } from '../types/index.ts';
 import { isTabAllowed } from '../utils/auditLogic.ts';
@@ -36,6 +37,7 @@ interface SidebarProps {
   notifications: AppNotification[];
   onMarkNotificationRead: (id: string) => void;
   onOpenSettings: () => void;
+  onOpenVideoTutorial?: () => void;
   onLogout: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -50,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   notifications,
   onMarkNotificationRead,
   onOpenSettings,
+  onOpenVideoTutorial,
   onLogout,
   isCollapsed,
   onToggleCollapse,
@@ -370,6 +373,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
         </nav>
+
+        {/* ====================================================================== */}
+        {/* VIDEO TUTORIAL & TRAINING GUIDE BUTTON                                 */}
+        {/* ====================================================================== */}
+        <div className="p-2 border-t border-slate-800/80">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenVideoTutorial) onOpenVideoTutorial();
+              onCloseMobile();
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all text-left group cursor-pointer bg-gradient-to-r from-emerald-950/70 to-teal-950/60 hover:from-emerald-900/90 hover:to-teal-900/80 border border-emerald-500/40 text-emerald-200 hover:text-white shadow-xs ${
+              isCollapsed ? 'justify-center px-2' : ''
+            }`}
+            title="Video Tutorial / ویڈیو گائیڈ"
+          >
+            <Video className="w-5 h-5 text-emerald-400 shrink-0" />
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold leading-none flex items-center gap-1.5">
+                  <span>Video Tutorial</span>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[9px] px-1.5 py-0.5 rounded font-mono">HD</span>
+                </div>
+                <div className="font-urdu text-[11px] text-emerald-300/80 mt-0.5 leading-none">
+                  ویڈیو ٹیوٹوریل و گائیڈ
+                </div>
+              </div>
+            )}
+          </button>
+        </div>
 
         {/* ====================================================================== */}
         {/* BOTTOM FOOTER INSIDE SIDEBAR                                          */}
