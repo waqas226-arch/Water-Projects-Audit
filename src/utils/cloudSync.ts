@@ -15,8 +15,106 @@ import { getAudits, getProjects, getRepairs, saveAudits, saveProjects, saveRepai
 // Default global cloud relay endpoint for FGRF Water Projects Master Database
 const DEFAULT_CLOUD_CONTAINER_ID = 'ff808181a09d98f701a1d9c2b0322914';
 const DEFAULT_CLOUD_API = `https://api.restful-api.dev/objects/${DEFAULT_CLOUD_CONTAINER_ID}`;
+const GITHUB_RAW_MASTER_DB = 'https://raw.githubusercontent.com/waqas226-arch/Water-project-Audit/main/data/master_cloud_database.json';
+const GITHUB_PAGES_MASTER_DB = 'https://waqas226-arch.github.io/Water-project-Audit/data/master_cloud_database.json';
+
 const STORAGE_ENDPOINT_KEY = 'fgrf_cloud_sync_custom_endpoint';
 const STORAGE_LAST_SYNC_KEY = 'fgrf_cloud_last_sync_timestamp';
+const STORAGE_GITHUB_TOKEN_KEY = 'fgrf_cloud_sync_github_token';
+
+export const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
+ * Faizan Global Relief Foundation (FGRF) - Water Projects Audit System
+ * Central Real-Time Cloud Master Database Web App
+ * 
+ * Form Reference: FGRF-WTS-AUD-002.00-26
+ * Author: Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF)
+ * 
+ * Instructions:
+ * 1. Open https://script.google.com and click "New project"
+ * 2. Replace all code with this script
+ * 3. Click "Deploy" > "New deployment"
+ * 4. Under "Select type" click the gear icon and select "Web app"
+ * 5. Set "Execute as": "Me"
+ * 6. Set "Who has access": "Anyone"
+ * 7. Click "Deploy", authorize access, and copy the Web app URL
+ * 8. Paste your URL into the Cloud Master DB settings in the Water Audit portal!
+ */
+
+function doGet(e) {
+  var prop = PropertiesService.getScriptProperties();
+  var raw = prop.getProperty("FGRF_MASTER_DB");
+  var payload = raw ? JSON.parse(raw) : {
+    audits: [],
+    projects: [],
+    repairs: [],
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "FGRF-Init"
+  };
+  
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var prop = PropertiesService.getScriptProperties();
+  try {
+    var incoming = JSON.parse(e.postData.contents);
+    var raw = prop.getProperty("FGRF_MASTER_DB");
+    var current = raw ? JSON.parse(raw) : { audits: [], projects: [], repairs: [] };
+    
+    // Merge Audits
+    var auditsMap = {};
+    (current.audits || []).forEach(function(a) { if (a && a.id) auditsMap[a.id] = a; });
+    (incoming.audits || []).forEach(function(a) {
+      if (a && a.id) {
+        if (!auditsMap[a.id]) {
+          auditsMap[a.id] = a;
+        } else {
+          var oldT = new Date(auditsMap[a.id].updatedAt || auditsMap[a.id].inspectionDateTime || 0).getTime();
+          var newT = new Date(a.updatedAt || a.inspectionDateTime || 0).getTime();
+          if (newT >= oldT) auditsMap[a.id] = a;
+        }
+      }
+    });
+
+    // Merge Projects
+    var projectsMap = {};
+    (current.projects || []).forEach(function(p) { if (p && p.id) projectsMap[p.id] = p; });
+    (incoming.projects || []).forEach(function(p) {
+      if (p && p.id) projectsMap[p.id] = Object.assign({}, projectsMap[p.id] || {}, p);
+    });
+
+    // Merge Repairs
+    var repairsMap = {};
+    (current.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
+    (incoming.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
+
+    var merged = {
+      audits: Object.keys(auditsMap).map(function(k) { return auditsMap[k]; }),
+      projects: Object.keys(projectsMap).map(function(k) { return projectsMap[k]; }),
+      repairs: Object.keys(repairsMap).map(function(k) { return repairsMap[k]; }),
+      lastUpdated: new Date().toISOString(),
+      updatedBy: incoming.updatedBy || "Field Staff"
+    };
+
+    prop.setProperty("FGRF_MASTER_DB", JSON.stringify(merged));
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      auditsCount: merged.audits.length,
+      projectsCount: merged.projects.length,
+      lastUpdated: merged.lastUpdated,
+      message: "Central Master Database updated successfully."
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+`;
 
 // BroadcastChannel for instant cross-tab live synchronization
 const syncBus = typeof window !== 'undefined' && 'BroadcastChannel' in window 
