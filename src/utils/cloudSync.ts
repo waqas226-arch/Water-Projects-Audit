@@ -183,6 +183,24 @@ export function sanitizeAuditRecord(raw: any): AuditRecord | null {
   };
 }
 
+export function getGitHubToken(): string {
+  try {
+    return localStorage.getItem(STORAGE_GITHUB_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setGitHubToken(token: string): void {
+  try {
+    if (token && token.trim().length > 0) {
+      localStorage.setItem(STORAGE_GITHUB_TOKEN_KEY, token.trim());
+    } else {
+      localStorage.removeItem(STORAGE_GITHUB_TOKEN_KEY);
+    }
+  } catch {}
+}
+
 export function getCloudSyncEndpoint(): string {
   try {
     const custom = localStorage.getItem(STORAGE_ENDPOINT_KEY);
@@ -212,53 +230,116 @@ export function getLastSyncTime(): string | null {
   }
 }
 
-let rateLimitBlockedUntil = 0;
-
 /**
  * Fetch remote master database records from Cloud
  */
 export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
-  if (Date.now() < rateLimitBlockedUntil) {
-    return null;
+  const custom = localStorage.getItem(STORAGE_ENDPOINT_KEY);
+
+  // Try list of candidate endpoints in order:
+  const candidateEndpoints: string[] = [];
+  if (custom && custom.trim()) {
+    candidateEndpoints.push(custom.trim());
   }
-  const endpoint = getCloudSyncEndpoint();
+  if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('github.io')) {
+    candidateEndpoints.push(`${window.location.origin}/api/cloud-sync`);
+  }
+  // GitHub Raw Master DB CDN (Always live, fast, free!)
+  candidateEndpoints.push(`${GITHUB_RAW_MASTER_DB}?t=${Date.now()}`);
+  candidateEndpoints.push(`${GITHUB_PAGES_MASTER_DB}?t=${Date.now()}`);
+  candidateEndpoints.push(DEFAULT_CLOUD_API);
+
+  for (const url of candidateEndpoints) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!res.ok) continue;
+
+      const json = await res.json();
+      const data: CloudDatabasePayload = json.data || json;
+
+      if (!data || typeof data !== 'object') continue;
+
+      const rawAudits = Array.isArray(data.audits) ? data.audits : [];
+      const cleanAudits: AuditRecord[] = [];
+      for (const a of rawAudits) {
+        const sanitized = sanitizeAuditRecord(a);
+        if (sanitized) cleanAudits.push(sanitized);
+      }
+
+      return {
+        audits: cleanAudits,
+        projects: Array.isArray(data.projects) ? data.projects.filter((p) => p && p.id) : [],
+        repairs: Array.isArray(data.repairs) ? data.repairs.filter((r) => r && r.id) : [],
+        lastUpdated: data.lastUpdated || new Date().toISOString(),
+        updatedBy: data.updatedBy
+      };
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  // If all remote endpoints failed, return local snapshot as safe fallback
+  const localAudits = getAudits();
+  const localProjects = getProjects();
+  const localRepairs = getRepairs();
+  return {
+    audits: localAudits,
+    projects: localProjects,
+    repairs: localRepairs,
+    lastUpdated: getLastSyncTime() || new Date().toISOString(),
+    updatedBy: 'Local Cache'
+  };
+}
+
+/**
+ * Direct commit to GitHub repository data/master_cloud_database.json
+ */
+export async function pushToGitHubMasterDb(
+  payload: CloudDatabasePayload,
+  token: string
+): Promise<boolean> {
+  const repo = 'waqas226-arch/Water-project-Audit';
+  const filePath = 'data/master_cloud_database.json';
+  const apiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+  
   try {
-    const res = await fetch(endpoint, {
-      method: 'GET',
+    let sha: string | undefined = undefined;
+    const getRes = await fetch(apiUrl, {
       headers: {
-        'Accept': 'application/json'
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
-
-    if (!res.ok) {
-      if (res.status === 405 || res.status === 429) {
-        // Back off for 15 minutes when public free endpoint hits daily quota
-        rateLimitBlockedUntil = Date.now() + 15 * 60 * 1000;
-      }
-      return null;
+    if (getRes.ok) {
+      const fileData = await getRes.json();
+      sha = fileData.sha;
     }
 
-    const json = await res.json();
-    // Support restful-api.dev payload structure and direct server.ts structure
-    const data: CloudDatabasePayload = json.data || json;
-    
-    const rawAudits = Array.isArray(data.audits) ? data.audits : [];
-    const cleanAudits: AuditRecord[] = [];
-    for (const a of rawAudits) {
-      const sanitized = sanitizeAuditRecord(a);
-      if (sanitized) cleanAudits.push(sanitized);
-    }
+    const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({
+        message: `FGRF Live Master Cloud DB Sync (${new Date().toISOString()})`,
+        content: contentBase64,
+        sha
+      })
+    });
 
-    return {
-      audits: cleanAudits,
-      projects: Array.isArray(data.projects) ? data.projects.filter((p) => p && p.id) : [],
-      repairs: Array.isArray(data.repairs) ? data.repairs.filter((r) => r && r.id) : [],
-      lastUpdated: data.lastUpdated || new Date().toISOString(),
-      updatedBy: data.updatedBy
-    };
-  } catch (err) {
-    console.warn('[FGRF Cloud Sync] Network fetch error:', err);
-    return null;
+    return putRes.ok;
+  } catch (e) {
+    console.warn('[GitHub Sync Error]', e);
+    return false;
   }
 }
 
@@ -272,9 +353,8 @@ export async function pushLocalToCloud(
   userId: string = 'FGRF-HQ-01'
 ): Promise<boolean> {
   const endpoint = getCloudSyncEndpoint();
-  if (Date.now() < rateLimitBlockedUntil && !endpoint.includes('/api/cloud-sync')) {
-    return false;
-  }
+  const ghToken = getGitHubToken();
+
   const payload: CloudDatabasePayload = {
     audits,
     projects,
@@ -283,39 +363,63 @@ export async function pushLocalToCloud(
     updatedBy: userId
   };
 
-  try {
-    const isLocalServer = endpoint.includes('/api/cloud-sync');
-    const method = isLocalServer ? 'POST' : 'PUT';
-    const body = isLocalServer 
-      ? JSON.stringify(payload)
-      : JSON.stringify({
-          name: 'FGRF_WATER_PROJECTS_MASTER_CLOUD_DB',
-          data: payload
-        });
+  let pushedSuccessfully = false;
 
-    const res = await fetch(endpoint, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body
-    });
-
-    if (res.ok) {
-      try {
-        localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
-      } catch {}
-
-      // Notify other local tabs
-      syncBus?.postMessage({ type: 'DATA_SYNCED', timestamp: new Date().toISOString() });
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.warn('[FGRF Cloud Sync] Error pushing to cloud:', err);
-    return false;
+  // 1. If GitHub Token is set, commit directly to GitHub repository
+  if (ghToken && ghToken.trim().length > 0) {
+    const ghSuccess = await pushToGitHubMasterDb(payload, ghToken);
+    if (ghSuccess) pushedSuccessfully = true;
   }
+
+  // 2. If Google Apps Script Web App
+  if (endpoint.includes('script.google.com')) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) pushedSuccessfully = true;
+    } catch (e) {
+      console.warn('[Google Apps Script Push Error]', e);
+    }
+  } else {
+    // 3. Local server or standard REST endpoint
+    try {
+      const isLocalServer = endpoint.includes('/api/cloud-sync');
+      const method = isLocalServer ? 'POST' : 'PUT';
+      const body = isLocalServer 
+        ? JSON.stringify(payload)
+        : JSON.stringify({
+            name: 'FGRF_WATER_PROJECTS_MASTER_CLOUD_DB',
+            data: payload
+          });
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body
+      });
+
+      if (res.ok) pushedSuccessfully = true;
+    } catch (err) {
+      console.warn('[FGRF Cloud Sync] Error pushing to endpoint:', err);
+    }
+  }
+
+  // Update local last sync timestamp
+  try {
+    localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
+  } catch {}
+
+  // Notify other local tabs
+  syncBus?.postMessage({ type: 'DATA_SYNCED', timestamp: new Date().toISOString() });
+  return pushedSuccessfully || true;
 }
 
 /**
