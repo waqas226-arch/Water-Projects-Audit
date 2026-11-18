@@ -208,6 +208,7 @@ export interface UserActivityLog {
     | 'LOGOUT' 
     | 'AUDIT_CREATE' 
     | 'AUDIT_UPDATE' 
+    | 'AUDIT_DELETE'
     | 'AUDIT_APPROVE' 
     | 'AUDIT_RETURN'
     | 'PROJECT_CREATE' 

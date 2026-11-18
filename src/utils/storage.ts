@@ -13,6 +13,8 @@ const STORAGE_KEYS = {
   ACTIVITY_LOGS: 'fgrf_wts_activity_logs_v2',
   MASTER_HEADS: 'fgrf_wts_master_heads_v2',
   GEO_HIERARCHY: 'fgrf_wts_geo_hierarchy_v2',
+  DELETED_AUDITS: 'fgrf_wts_deleted_audit_ids_v3',
+  DELETED_PROJECTS: 'fgrf_wts_deleted_project_ids_v3',
 };
 
 const memoryStorage: Record<string, string> = {};
@@ -89,18 +91,70 @@ export function ensureDemoDataCleared(): void {
 // Automatically clear on module load
 ensureDemoDataCleared();
 
+// -------------------------------------------------------------
+// DELETED RECORDS REGISTRY (Prevents Resurrection on Log Out/In)
+// -------------------------------------------------------------
+
+export function getDeletedAuditIds(): string[] {
+  try {
+    const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_AUDITS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((id: string) => String(id).trim().toUpperCase()) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markAuditAsDeleted(auditId: string): void {
+  const current = getDeletedAuditIds();
+  const cleanId = String(auditId).trim().toUpperCase();
+  if (!current.includes(cleanId)) {
+    current.push(cleanId);
+    safeStorage.setItem(STORAGE_KEYS.DELETED_AUDITS, JSON.stringify(current));
+  }
+}
+
+export function getDeletedProjectIds(): string[] {
+  try {
+    const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_PROJECTS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((id: string) => String(id).trim().toUpperCase()) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markProjectAsDeleted(projectId: string): void {
+  const current = getDeletedProjectIds();
+  const cleanId = String(projectId).trim().toUpperCase();
+  if (!current.includes(cleanId)) {
+    current.push(cleanId);
+    safeStorage.setItem(STORAGE_KEYS.DELETED_PROJECTS, JSON.stringify(current));
+  }
+}
+
 export function getProjects(): WaterProject[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.PROJECTS);
-    if (!raw) {
+    const deletedIds = getDeletedProjectIds();
+
+    // Fresh initialization only if storage key never existed
+    if (raw === null) {
       safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
-      return SEED_PROJECTS;
+      return SEED_PROJECTS.filter((p) => !deletedIds.includes(p.id.trim().toUpperCase()));
     }
+
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_PROJECTS;
-    return parsed.filter((p) => p && typeof p === 'object' && p.id);
+    if (!Array.isArray(parsed)) return [];
+
+    // Filter out deleted projects
+    return parsed.filter(
+      (p) => p && typeof p === 'object' && p.id && !deletedIds.includes(String(p.id).trim().toUpperCase())
+    );
   } catch {
-    return SEED_PROJECTS;
+    return [];
   }
 }
 
@@ -111,14 +165,27 @@ export function saveProjects(projects: WaterProject[]): void {
 export function getAudits(): AuditRecord[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.AUDITS);
-    if (!raw) {
+    const deletedIds = getDeletedAuditIds();
+
+    // Fresh initialization only if storage key never existed
+    if (raw === null) {
       safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
-      return SEED_AUDITS;
+      return SEED_AUDITS.filter((a) => !deletedIds.includes(a.id.trim().toUpperCase()));
     }
+
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_AUDITS;
+    if (!Array.isArray(parsed)) return [];
+
+    // Filter out deleted audits
     const cleanList = parsed
-      .filter((a) => a && typeof a === 'object' && a.id && a.id !== 'TEST-001')
+      .filter(
+        (a) =>
+          a &&
+          typeof a === 'object' &&
+          a.id &&
+          a.id !== 'TEST-001' &&
+          !deletedIds.includes(String(a.id).trim().toUpperCase())
+      )
       .map((a) => ({
         ...a,
         checkpoints: Array.isArray(a.checkpoints) ? a.checkpoints : [],
@@ -128,13 +195,9 @@ export function getAudits(): AuditRecord[] {
         inspectionDateTime: a.inspectionDateTime || new Date().toISOString(),
       }));
 
-    // Ensure AUD-2026-0001 is always present as baseline certified audit
-    if (!cleanList.some((a) => a.id && a.id.toLowerCase() === 'aud-2026-0001')) {
-      cleanList.unshift(OFFICIAL_PRECONFIGURED_AUDITS['aud-2026-0001']);
-    }
     return cleanList;
   } catch {
-    return SEED_AUDITS;
+    return [];
   }
 }
 
@@ -364,8 +427,11 @@ export function updateProject(updatedProject: WaterProject): WaterProject[] {
 }
 
 export function deleteProject(projectId: string): WaterProject[] {
+  const cleanId = String(projectId).trim().toUpperCase();
+  markProjectAsDeleted(cleanId);
+
   const projects = getProjects();
-  const filtered = projects.filter((p) => p.id !== projectId);
+  const filtered = projects.filter((p) => p.id.trim().toUpperCase() !== cleanId);
   saveProjects(filtered);
 
   // Automatically publish to Real-Time Central Cloud Database
@@ -373,6 +439,99 @@ export function deleteProject(projectId: string): WaterProject[] {
     cs.pushLocalToCloud(getAudits(), filtered, getRepairs());
   }).catch(() => {});
   return filtered;
+}
+
+// -------------------------------------------------------------
+// AUDIT MASTER DATABASE: EDIT & DELETE RIGHTS
+// -------------------------------------------------------------
+
+export function updateAudit(updatedAudit: AuditRecord): AuditRecord[] {
+  const audits = getAudits();
+  const cleanId = String(updatedAudit.id).trim().toUpperCase();
+  const idx = audits.findIndex((a) => String(a.id).trim().toUpperCase() === cleanId);
+
+  const recordToSave: AuditRecord = {
+    ...updatedAudit,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (idx >= 0) {
+    audits[idx] = recordToSave;
+  } else {
+    audits.unshift(recordToSave);
+  }
+
+  saveAudits(audits);
+
+  // Synchronize condition to the associated water project
+  if (recordToSave.projectId) {
+    const projects = getProjects();
+    const projIdx = projects.findIndex((p) => p.id === recordToSave.projectId);
+    if (projIdx >= 0) {
+      projects[projIdx].currentCondition = recordToSave.overallCondition;
+      projects[projIdx].lastInspectionDate = recordToSave.inspectionDateTime?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+      saveProjects(projects);
+    }
+  }
+
+  // Log user activity
+  try {
+    const currentUser = getCurrentUser();
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'AUDIT_UPDATE',
+      actionDescription: `Updated Audit Record ${recordToSave.id}`,
+      details: `Project: ${recordToSave.projectId} • Condition: ${recordToSave.overallCondition} • Status: ${recordToSave.approvalStatus}`,
+    });
+  } catch {}
+
+  // Automatically broadcast update to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then(cs => {
+    cs.pushLocalToCloud(audits, getProjects(), getRepairs());
+  }).catch(() => {});
+
+  return audits;
+}
+
+export function deleteAudit(auditId: string): AuditRecord[] {
+  const cleanId = String(auditId).trim().toUpperCase();
+  markAuditAsDeleted(cleanId);
+
+  const audits = getAudits();
+  const auditToDelete = audits.find((a) => String(a.id).trim().toUpperCase() === cleanId);
+  const auditRepairIds = (auditToDelete?.repairs || []).map((r) => r.id);
+
+  const filteredAudits = audits.filter((a) => String(a.id).trim().toUpperCase() !== cleanId);
+  saveAudits(filteredAudits);
+
+  // Also remove any pending repair items associated with this audit
+  const repairs = getRepairs();
+  const filteredRepairs = repairs.filter((r) => !auditRepairIds.includes(r.id));
+  if (repairs.length !== filteredRepairs.length) {
+    saveRepairs(filteredRepairs);
+  }
+
+  // Log user activity
+  try {
+    const currentUser = getCurrentUser();
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'AUDIT_DELETE',
+      actionDescription: `Permanently deleted Audit Record ${auditId}`,
+      details: `Audit ID ${auditId} removed from master registry and cloud sync.`,
+    });
+  } catch {}
+
+  // Automatically broadcast deletion to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then(cs => {
+    cs.pushLocalToCloud(filteredAudits, getProjects(), filteredRepairs);
+  }).catch(() => {});
+
+  return filteredAudits;
 }
 
 // -------------------------------------------------------------

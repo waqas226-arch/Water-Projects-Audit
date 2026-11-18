@@ -19,6 +19,8 @@ import {
   deleteUser,
   updateProject,
   deleteProject,
+  updateAudit,
+  deleteAudit,
   saveAudits, 
   saveNotifications, 
   saveProjects, 
@@ -302,6 +304,21 @@ export default function App() {
     showToast(`Project ${projectId} removed from Master Database.`);
   };
 
+  // Edit & Delete Audit Records (Master Database)
+  const handleUpdateAudit = (updated: AuditRecord) => {
+    const updatedList = updateAudit(updated);
+    setAudits(updatedList);
+    setProjects(getProjects());
+    showToast(`Audit Record ${updated.id} updated in Master Database.`);
+  };
+
+  const handleDeleteAudit = (auditId: string) => {
+    const updatedList = deleteAudit(auditId);
+    setAudits(updatedList);
+    setRepairs(getRepairs());
+    showToast(`Audit Record ${auditId} permanently deleted.`);
+  };
+
   // Start audit for a specific project
   const handleAuditForProject = (projectId: string) => {
     setPreselectedAuditProjectId(projectId);
@@ -521,6 +538,8 @@ export default function App() {
               setActiveAiAudit(audit);
               setIsAiModalOpen(true);
             }}
+            onEditAudit={handleUpdateAudit}
+            onDeleteAudit={handleDeleteAudit}
           />
         )}
 

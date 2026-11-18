@@ -19,7 +19,11 @@ import {
   X,
   QrCode,
   Download,
-  ExternalLink
+  ExternalLink,
+  Edit,
+  Trash2,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { AuditRecord, InspectionApprovalStatus, UserProfile } from '../types/index.ts';
 import { filterRecordsByJurisdiction } from '../utils/auditLogic.ts';
@@ -32,6 +36,8 @@ interface InspectionRecordsViewProps {
   onViewPrintableForm: (audit: AuditRecord) => void;
   onUpdateAuditApproval: (auditId: string, status: InspectionApprovalStatus, remarks?: string) => void;
   onOpenAiAdvisor: (audit: AuditRecord) => void;
+  onEditAudit?: (audit: AuditRecord) => void;
+  onDeleteAudit?: (auditId: string) => void;
 }
 
 export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
@@ -40,6 +46,8 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
   onViewPrintableForm,
   onUpdateAuditApproval,
   onOpenAiAdvisor,
+  onEditAudit,
+  onDeleteAudit,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProvince, setFilterProvince] = useState<string>('all');
@@ -47,6 +55,11 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
   const [filterCondition, setFilterCondition] = useState<string>('all');
   const [selectedQrAudit, setSelectedQrAudit] = useState<AuditRecord | null>(null);
   const [modalQrCodeUrl, setModalQrCodeUrl] = useState<string>('');
+
+  // Edit & Delete states
+  const [editingAudit, setEditingAudit] = useState<AuditRecord | null>(null);
+  const [deletingAudit, setDeletingAudit] = useState<AuditRecord | null>(null);
+  const [editError, setEditError] = useState<string>('');
 
   React.useEffect(() => {
     if (!selectedQrAudit) {
@@ -96,6 +109,25 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
   }, [permittedAudits, filterProvince, filterStatus, filterCondition, searchQuery]);
 
   const canReview = currentUser.role === 'super_admin' || currentUser.role === 'national_mgmt' || currentUser.role === 'provincial_coord';
+
+  const handleOpenEditModal = (audit: AuditRecord) => {
+    setEditingAudit({ ...audit });
+    setEditError('');
+  };
+
+  const handleSaveEditAudit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAudit) return;
+    if (!editingAudit.projectId.trim() || !editingAudit.village?.trim()) {
+      setEditError('Project ID and Village/Location are required.');
+      return;
+    }
+    if (onEditAudit) {
+      onEditAudit(editingAudit);
+    }
+    setEditingAudit(null);
+    setEditError('');
+  };
 
   const handleApprove = (audit: AuditRecord) => {
     onUpdateAuditApproval(audit.id, 'Approved', reviewRemarks || 'Inspection verified and approved by Head Office.');
@@ -345,6 +377,26 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
                             Review
                           </button>
                         )}
+
+                        {/* Edit Audit Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(audit)}
+                          className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 rounded-lg transition-colors cursor-pointer"
+                          title="Edit Audit Record / معائنہ فارم ریکارڈ میں ترمیم کریں"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Delete Audit Button */}
+                        <button
+                          type="button"
+                          onClick={() => setDeletingAudit(audit)}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
+                          title="Permanently Delete Audit Record / معائنہ فارم ریکارڈ حذف کریں"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -401,24 +453,310 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => handleReturn(reviewingAudit)}
-                className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-300 transition-colors flex items-center gap-1.5"
+                onClick={() => {
+                  const target = reviewingAudit;
+                  setReviewingAudit(null);
+                  setDeletingAudit(target);
+                }}
+                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Permanently delete this audit record"
               >
-                <ThumbsDown className="w-3.5 h-3.5" />
-                Return for Correction
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete / حذف</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleReturn(reviewingAudit)}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-300 transition-colors flex items-center gap-1.5"
+                >
+                  <ThumbsDown className="w-3.5 h-3.5" />
+                  Return for Correction
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApprove(reviewingAudit)}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  Approve Audit Form
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingAudit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-rose-200">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Delete Audit Record / معائنہ فارم حذف کریں
+                </h3>
+                <p className="text-xs text-rose-600 font-semibold">
+                  Permanent Removal from Registry & Cloud
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Audit Code:</span>
+                <span className="font-mono font-bold text-slate-900">{deletingAudit.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Project / Site:</span>
+                <span className="font-bold text-slate-800">{deletingAudit.projectId} ({deletingAudit.village || 'N/A'})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">District:</span>
+                <span className="text-slate-700">{deletingAudit.district}, {deletingAudit.province}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Inspection Date:</span>
+                <span className="text-slate-700">{deletingAudit.inspectionDateTime?.slice(0, 10)}</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
+              <p className="font-semibold flex items-center gap-1 text-amber-900">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Important Note / اہم تنبیہ:
+              </p>
+              <p>
+                Deleting this audit will permanently remove it from both local device storage and the central cloud database. It will NEVER be restored when you log off, log on, or refresh.
+              </p>
+              <p className="font-urdu text-[12px] leading-relaxed text-right">
+                یہ ریکارڈ مستقل طور پر حذف ہو جائے گا اور دوبارہ لاگ ان کرنے پر بھی واپس نہیں آئے گا۔
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeletingAudit(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Cancel / منسوخ کریں
               </button>
               <button
                 type="button"
-                onClick={() => handleApprove(reviewingAudit)}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                onClick={() => {
+                  if (onDeleteAudit && deletingAudit) {
+                    onDeleteAudit(deletingAudit.id);
+                  }
+                  setDeletingAudit(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-rose-600/30 cursor-pointer flex items-center gap-1.5"
               >
-                <ThumbsUp className="w-3.5 h-3.5" />
-                Approve Audit Form
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Permanently / مستقل حذف کریں</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Audit Record Modal */}
+      {editingAudit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-5 border border-slate-200 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <Edit className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Edit Audit Record / معائنہ فارم ریکارڈ میں ترمیم
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    {editingAudit.id} • Form {editingAudit.formReference || 'FGRF-WTS-AUD-002.00-26'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAudit(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditAudit} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Project ID */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Project ID / پراجیکٹ کوڈ</label>
+                  <input
+                    type="text"
+                    value={editingAudit.projectId}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, projectId: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Village / Site Name */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Village / گاؤں کا نام</label>
+                  <input
+                    type="text"
+                    value={editingAudit.village || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, village: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* District */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">District / ضلع</label>
+                  <input
+                    type="text"
+                    value={editingAudit.district || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, district: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Province */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Province / صوبہ</label>
+                  <input
+                    type="text"
+                    value={editingAudit.province || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, province: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Inspection Date */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Inspection Date / تاریخ معائنہ</label>
+                  <input
+                    type="date"
+                    value={editingAudit.inspectionDateTime ? editingAudit.inspectionDateTime.slice(0, 10) : ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, inspectionDateTime: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Inspector Name */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Inspector Name / معائنہ کار کا نام</label>
+                  <input
+                    type="text"
+                    value={editingAudit.inspectorName || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, inspectorName: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Overall Condition */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Condition Evaluated / مجموعی حالت</label>
+                  <select
+                    value={editingAudit.overallCondition || 'Functional'}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, overallCondition: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="Functional">Functional / مکمل فعال</option>
+                    <option value="Functional – Repair Needed">Functional – Repair Needed / فعال لیکن مرمت درکار</option>
+                    <option value="Non-functional">Non-functional / غیر فعال</option>
+                    <option value="Decommissioned / Wrong Location">Decommissioned / Wrong Location / ناکارہ</option>
+                  </select>
+                </div>
+
+                {/* Approval Status */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Approval Status / منظوری کی حیثیت</label>
+                  <select
+                    value={editingAudit.approvalStatus || 'Submitted'}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, approvalStatus: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="Submitted">Submitted / ارسال شدہ</option>
+                    <option value="Approved">Approved / منظور شدہ</option>
+                    <option value="Returned">Returned / واپس برائے اصلاح</option>
+                    <option value="Rejected">Rejected / مسترد</option>
+                  </select>
+                </div>
+
+                {/* Beneficiary Name */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Beneficiary Name / مستفید کنندہ</label>
+                  <input
+                    type="text"
+                    value={editingAudit.beneficiaryName || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, beneficiaryName: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Beneficiary Mobile */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Beneficiary Mobile / موبائل نمبر</label>
+                  <input
+                    type="text"
+                    value={editingAudit.beneficiaryMobile || ''}
+                    onChange={(e) => setEditingAudit({ ...editingAudit, beneficiaryMobile: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Inspector Remarks */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Inspector Remarks / معائنہ کار کے ریمارکس</label>
+                <textarea
+                  rows={3}
+                  value={editingAudit.inspectorRemarks || ''}
+                  onChange={(e) => setEditingAudit({ ...editingAudit, inspectorRemarks: e.target.value })}
+                  placeholder="Enter any technical observations, defects, or field notes..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingAudit(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel / منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-emerald-700/20 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save Changes / محفوظ کریں</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

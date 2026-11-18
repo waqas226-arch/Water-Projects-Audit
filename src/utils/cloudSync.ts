@@ -10,7 +10,7 @@
 
 import { AuditRecord, WaterProject, RepairItem } from '../types/index.ts';
 import { createDefaultCheckpoints } from './auditLogic.ts';
-import { getAudits, getProjects, getRepairs, saveAudits, saveProjects, saveRepairs } from './storage.ts';
+import { getAudits, getProjects, getRepairs, saveAudits, saveProjects, saveRepairs, getDeletedAuditIds, getDeletedProjectIds } from './storage.ts';
 
 // Default global cloud relay endpoint for FGRF Water Projects Master Database
 const DEFAULT_CLOUD_CONTAINER_ID = 'ff808181a09d98f701a1d9c2b0322914';
@@ -224,10 +224,13 @@ export async function pushLocalToCloud(
  * Merge local and cloud audits & projects intelligently by ID & timestamp
  */
 export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merged: AuditRecord[]; newCount: number } {
+  const deletedIds = getDeletedAuditIds();
   const map = new Map<string, AuditRecord>();
   local.forEach((a) => {
     const s = sanitizeAuditRecord(a);
-    if (s) map.set(s.id, s);
+    if (s && !deletedIds.includes(s.id.trim().toUpperCase())) {
+      map.set(s.id, s);
+    }
   });
 
   let newCount = 0;
@@ -235,14 +238,17 @@ export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merg
     const cleanRemote = sanitizeAuditRecord(remoteAudit);
     if (!cleanRemote) return;
 
+    // Never re-import an audit that was explicitly deleted locally
+    if (deletedIds.includes(cleanRemote.id.trim().toUpperCase())) return;
+
     if (!map.has(cleanRemote.id)) {
       map.set(cleanRemote.id, cleanRemote);
       newCount++;
     } else {
       // If remote has newer update, keep remote
       const localAudit = map.get(cleanRemote.id)!;
-      const remoteTime = new Date(cleanRemote.createdAt || cleanRemote.inspectionDateTime || 0).getTime();
-      const localTime = new Date(localAudit.createdAt || localAudit.inspectionDateTime || 0).getTime();
+      const remoteTime = new Date(cleanRemote.updatedAt || cleanRemote.createdAt || cleanRemote.inspectionDateTime || 0).getTime();
+      const localTime = new Date(localAudit.updatedAt || localAudit.createdAt || localAudit.inspectionDateTime || 0).getTime();
       if (remoteTime > localTime) {
         map.set(cleanRemote.id, cleanRemote);
       }
@@ -256,11 +262,21 @@ export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merg
 }
 
 export function mergeProjects(local: WaterProject[], remote: WaterProject[]): { merged: WaterProject[]; newCount: number } {
+  const deletedIds = getDeletedProjectIds();
   const map = new Map<string, WaterProject>();
-  local.forEach((p) => map.set(p.id, p));
+  local.forEach((p) => {
+    if (p && p.id && !deletedIds.includes(p.id.trim().toUpperCase())) {
+      map.set(p.id, p);
+    }
+  });
 
   let newCount = 0;
   remote.forEach((remoteProj) => {
+    if (!remoteProj || !remoteProj.id) return;
+
+    // Never re-import a project that was explicitly deleted locally
+    if (deletedIds.includes(remoteProj.id.trim().toUpperCase())) return;
+
     if (!map.has(remoteProj.id)) {
       map.set(remoteProj.id, remoteProj);
       newCount++;
