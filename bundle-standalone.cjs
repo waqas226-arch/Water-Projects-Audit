@@ -51,4 +51,13 @@ ${jsContent}
 // Write to root index.html and dist/index.html
 fs.writeFileSync(path.resolve(__dirname, 'index.html'), htmlTemplate, 'utf8');
 fs.writeFileSync(path.resolve(distDir, 'index.html'), htmlTemplate, 'utf8');
-console.log('Successfully generated standalone self-contained index.html!');
+
+// Copy data directory to dist/data for static CDN access on GitHub Pages
+const distDataDir = path.resolve(distDir, 'data');
+if (!fs.existsSync(distDataDir)) fs.mkdirSync(distDataDir, { recursive: true });
+const masterDbSrc = path.resolve(__dirname, 'data', 'master_cloud_database.json');
+if (fs.existsSync(masterDbSrc)) {
+  fs.copyFileSync(masterDbSrc, path.resolve(distDataDir, 'master_cloud_database.json'));
+}
+
+console.log('Successfully generated standalone self-contained index.html and dist/data/master_cloud_database.json!');

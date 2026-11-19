@@ -53,7 +53,9 @@ import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
   syncAllWithCloud, 
-  fetchCloudData 
+  fetchCloudData,
+  publishUsersToCloud,
+  pushLocalToCloud
 } from './utils/cloudSync.ts';
 import { Menu, Cloud, RefreshCw, CheckCircle2, Video, Bell, Check } from 'lucide-react';
 
@@ -110,18 +112,21 @@ export default function App() {
       if (payload.geoHierarchy) {
         setGeoHierarchy(payload.geoHierarchy);
       }
+      if (payload.users && payload.users.length > 0) {
+        setUsers(payload.users);
+      }
       setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       if (payload.newCount > 0) {
         showToast(`🔄 Real-time Cloud Sync: Received ${payload.newCount} new inspection record(s) from field staff!`);
       } else if (payload.geoUpdated) {
         showToast(`📍 Geographical locations updated from Cloud Master DB!`);
+      } else if (payload.usersUpdated) {
+        showToast(`👤 Staff User IDs & Rights synchronized from Cloud Master DB!`);
       }
     }, currentUser.id);
 
     return cleanup;
   }, [currentUser.id]);
-
-
 
   // Manual Trigger for Instant Cloud Sync
   const handleManualCloudSync = async () => {
@@ -132,6 +137,7 @@ export default function App() {
       setProjects(getProjects());
       setRepairs(getRepairs());
       setGeoHierarchy(getGeoHierarchy());
+      setUsers(getUsers());
       setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       showToast(res.message);
     } catch {
@@ -193,7 +199,8 @@ export default function App() {
   const handleCreateUser = (newUser: UserProfile) => {
     const updated = createUser(newUser);
     setUsers(updated || getUsers());
-    showToast(`User ID ${newUser.id} (${newUser.name}) registered successfully.`);
+    publishUsersToCloud(updated || getUsers(), currentUser.id).catch(() => {});
+    showToast(`User ID ${newUser.id} (${newUser.name}) registered successfully and synced to Cloud Master DB.`);
   };
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
@@ -203,7 +210,8 @@ export default function App() {
       setCurrentUserState(updatedUser);
       setCurrentUser(updatedUser);
     }
-    showToast(`User ID ${updatedUser.id} and access rights updated.`);
+    publishUsersToCloud(updated || getUsers(), currentUser.id).catch(() => {});
+    showToast(`User ID ${updatedUser.id} and access rights updated and synced to Cloud Master DB.`);
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -213,7 +221,8 @@ export default function App() {
       return;
     }
     setUsers(res.users || getUsers());
-    showToast(`User ID ${userId} deleted.`);
+    publishUsersToCloud(res.users || getUsers(), currentUser.id).catch(() => {});
+    showToast(`User ID ${userId} deleted and removed from Cloud Master DB.`);
   };
 
   // Submit Audit Form
@@ -248,6 +257,7 @@ export default function App() {
 
     setAudits(updatedAudits);
     saveAudits(updatedAudits);
+    pushLocalToCloud(updatedAudits, projects, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
 
     // Notification
     const notifs = getNotifications();
@@ -284,6 +294,7 @@ export default function App() {
     });
     setAudits(updatedAudits);
     saveAudits(updatedAudits);
+    pushLocalToCloud(updatedAudits, projects, newRepairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
 
     showToast(`Corrective action ${updatedRepair.id} updated (${updatedRepair.status}).`);
   };
@@ -293,6 +304,7 @@ export default function App() {
     const newProjects = [newProject, ...projects];
     setProjects(newProjects);
     saveProjects(newProjects);
+    pushLocalToCloud(audits, newProjects, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Project ${newProject.id} registered successfully.`);
   };
 
@@ -301,6 +313,7 @@ export default function App() {
     const newProjects = [...importedProjects, ...projects];
     setProjects(newProjects);
     saveProjects(newProjects);
+    pushLocalToCloud(audits, newProjects, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Successfully imported ${importedProjects.length} water projects!`);
   };
 
@@ -308,12 +321,14 @@ export default function App() {
   const handleUpdateProject = (updated: WaterProject) => {
     const updatedList = updateProject(updated);
     setProjects(updatedList);
+    pushLocalToCloud(audits, updatedList, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Project ${updated.id} updated in Master Database.`);
   };
 
   const handleDeleteProject = (projectId: string) => {
     const updatedList = deleteProject(projectId);
     setProjects(updatedList);
+    pushLocalToCloud(audits, updatedList, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Project ${projectId} removed from Master Database.`);
   };
 
@@ -322,6 +337,7 @@ export default function App() {
     const updatedList = updateAudit(updated);
     setAudits(updatedList);
     setProjects(getProjects());
+    pushLocalToCloud(updatedList, getProjects(), getRepairs(), currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Audit Record ${updated.id} updated in Master Database.`);
   };
 
@@ -329,6 +345,7 @@ export default function App() {
     const updatedList = deleteAudit(auditId);
     setAudits(updatedList);
     setRepairs(getRepairs());
+    pushLocalToCloud(updatedList, getProjects(), getRepairs(), currentUser.id, geoHierarchy, undefined, users).catch(() => {});
     showToast(`Audit Record ${auditId} permanently deleted.`);
   };
 
@@ -710,7 +727,11 @@ export default function App() {
           <OpenHeadsView 
             currentUser={currentUser} 
             showToast={showToast} 
-            onRefreshGeo={() => setGeoHierarchy(getGeoHierarchy())}
+            onRefreshGeo={() => {
+              setGeoHierarchy(getGeoHierarchy());
+              setUsers(getUsers());
+            }}
+            onUsersUpdated={(updatedUsers) => setUsers(updatedUsers)}
           />
         )}
 

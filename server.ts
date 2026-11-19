@@ -66,6 +66,14 @@ app.post('/api/cloud-sync', (req, res) => {
     if (idx >= 0) mergedRepairs[idx] = r;
     else mergedRepairs.unshift(r);
   }
+  const mergedUsers = [...(current.users || [])];
+  for (const u of (incoming.users || [])) {
+    if (u && u.id) {
+      const idx = mergedUsers.findIndex((x: any) => x && String(x.id).toUpperCase() === String(u.id).toUpperCase());
+      if (idx >= 0) mergedUsers[idx] = { ...mergedUsers[idx], ...u };
+      else mergedUsers.push(u);
+    }
+  }
   const updated = {
     system: "Faizan Global Relief Foundation (FGRF) - Water Projects Audit & Monitoring System",
     formReference: "FGRF-WTS-AUD-002.00-26",
@@ -75,6 +83,7 @@ app.post('/api/cloud-sync', (req, res) => {
     repairs: mergedRepairs,
     geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || undefined,
     masterHeads: incoming.masterHeads || current.masterHeads || undefined,
+    users: mergedUsers,
     lastUpdated: new Date().toISOString(),
     updatedBy: incoming.updatedBy || 'FGRF-HQ'
   };

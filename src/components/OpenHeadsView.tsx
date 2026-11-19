@@ -27,6 +27,8 @@ import {
   getGeoHierarchy, 
   saveGeoHierarchy, 
   logUserActivity, 
+  cascadeLocationChangeToUsers,
+  getUsers,
   DEFAULT_MASTER_HEADS_CONFIG 
 } from '../utils/storage.ts';
 import { publishGeoHierarchyToCloud, publishMasterHeadsToCloud } from '../utils/cloudSync.ts';
@@ -34,6 +36,7 @@ import { publishGeoHierarchyToCloud, publishMasterHeadsToCloud } from '../utils/
 interface OpenHeadsViewProps {
   currentUser: UserProfile;
   onRefreshGeo?: () => void;
+  onUsersUpdated?: (users: UserProfile[]) => void;
   showToast: (msg: string) => void;
 }
 
@@ -54,6 +57,7 @@ interface EditingGeoState {
 export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   currentUser,
   onRefreshGeo,
+  onUsersUpdated,
   showToast,
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveHeadTab>('geo');
@@ -647,6 +651,13 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
     setGeoCountries(updated);
     handleSaveAndSyncGeo(updated);
     setEditingGeo(null);
+
+    // Cascade location rename to user ID profiles & jurisdictions in real time
+    if (type === 'province' || type === 'division' || type === 'district') {
+      const refreshedUsers = cascadeLocationChangeToUsers(type, 'edit', currentName, trimmedEn);
+      if (onUsersUpdated) onUsersUpdated(refreshedUsers);
+    }
+
     showToast(`Successfully updated ${type}: "${trimmedEn}"`);
     logUserActivity({
       userId: currentUser.id,
@@ -708,6 +719,11 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
     setSelectedProvinceName(nextP?.name || '');
     setSelectedDivisionName(nextP?.divisions[0]?.name || '');
     setSelectedDistrictName(nextP?.divisions[0]?.districts[0]?.name || '');
+    
+    // Cascade province deletion to users
+    const refreshedUsersP = cascadeLocationChangeToUsers('province', 'delete', pName);
+    if (onUsersUpdated) onUsersUpdated(refreshedUsersP);
+
     showToast(`Province "${pName}" deleted.`);
     logUserActivity({
       userId: currentUser.id,
@@ -745,6 +761,11 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       setSelectedDivisionName(nextD?.name || '');
       setSelectedDistrictName(nextD?.districts[0]?.name || '');
     }
+
+    // Cascade division deletion to users
+    const refreshedUsersD = cascadeLocationChangeToUsers('division', 'delete', dName);
+    if (onUsersUpdated) onUsersUpdated(refreshedUsersD);
+
     showToast(`Division "${dName}" deleted.`);
     logUserActivity({
       userId: currentUser.id,
@@ -789,6 +810,11 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       const nextDist = curD?.districts[0];
       setSelectedDistrictName(nextDist?.name || '');
     }
+
+    // Cascade district deletion to users
+    const refreshedUsersDist = cascadeLocationChangeToUsers('district', 'delete', distName);
+    if (onUsersUpdated) onUsersUpdated(refreshedUsersDist);
+
     showToast(`District "${distName}" deleted.`);
     logUserActivity({
       userId: currentUser.id,

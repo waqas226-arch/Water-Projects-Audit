@@ -32,6 +32,7 @@ import {
   mergeAudits,
   mergeProjects,
   mergeRepairs,
+  mergeUsers,
   GOOGLE_APPS_SCRIPT_TEMPLATE
 } from '../utils/cloudSync.ts';
 import { 
@@ -44,7 +45,9 @@ import {
   saveMasterHeads,
   saveAudits, 
   saveProjects, 
-  saveRepairs 
+  saveRepairs,
+  getUsers,
+  saveUsers
 } from '../utils/storage.ts';
 import { mergeGeoHierarchy } from '../utils/pakistanGeo.ts';
 
@@ -77,7 +80,7 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
   const [testMessage, setTestMessage] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [lastSync, setLastSync] = useState<string | null>(getLastSyncTime());
-  const [remoteStats, setRemoteStats] = useState<{ audits: number; projects: number; lastUpdated?: string } | null>(null);
+  const [remoteStats, setRemoteStats] = useState<{ audits: number; projects: number; users?: number; lastUpdated?: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,9 +104,10 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
         setRemoteStats({
           audits: data.audits.length,
           projects: data.projects.length,
+          users: data.users?.length || 0,
           lastUpdated: data.lastUpdated
         });
-        setTestMessage(`Online & Operational (${data.audits.length} audits, ${data.projects.length} projects in cloud)`);
+        setTestMessage(`Online & Operational (${data.audits.length} audits, ${data.projects.length} projects, ${data.users?.length || 0} users in cloud)`);
         if (verbose) showToast('Cloud Master DB connection confirmed active!');
       } else {
         setTestStatus('failed');
@@ -142,11 +146,12 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
         getRepairs(),
         currentUser.id,
         getGeoHierarchy(),
-        getMasterHeads()
+        getMasterHeads(),
+        getUsers()
       );
       if (success) {
         setLastSync(new Date().toISOString());
-        showToast('All local inspection records and locations uploaded to Cloud Master DB!');
+        showToast('All local inspection records, locations and user IDs uploaded to Cloud Master DB!');
         await handleTestConnection(false);
       } else {
         showToast('Upload failed. Verify cloud endpoint URL.');
@@ -243,6 +248,11 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
           saveMasterHeads(parsed.masterHeads);
         }
 
+        if (parsed.users && Array.isArray(parsed.users) && parsed.users.length > 0) {
+          const { merged: mergedUsers } = mergeUsers(getUsers(), parsed.users);
+          saveUsers(mergedUsers);
+        }
+
         onDataUpdated();
         showToast(`Imported & Merged: ${newAudits} new audits, ${newProjects} new projects!`);
 
@@ -253,7 +263,8 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
           mergedRepairs,
           currentUser.id,
           getGeoHierarchy(),
-          getMasterHeads()
+          getMasterHeads(),
+          getUsers()
         );
       } catch (err: any) {
         showToast(`Import failed: ${err?.message || 'Could not parse JSON'}`);
@@ -385,33 +396,39 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
               </div>
 
               {/* Data Statistics Matrix */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                   <div className="text-[10px] font-bold text-slate-500 uppercase">Local Audits</div>
-                  <div className="text-xl font-extrabold text-emerald-800 mt-0.5">{audits.length}</div>
+                  <div className="text-lg font-extrabold text-emerald-800 mt-0.5">{audits.length}</div>
                   <div className="text-[10px] text-slate-400 font-urdu mt-0.5">معائنہ فارمز</div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                   <div className="text-[10px] font-bold text-slate-500 uppercase">Local Projects</div>
-                  <div className="text-xl font-extrabold text-teal-800 mt-0.5">{projects.length}</div>
+                  <div className="text-lg font-extrabold text-teal-800 mt-0.5">{projects.length}</div>
                   <div className="text-[10px] text-slate-400 font-urdu mt-0.5">واٹر پراجیکٹس</div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase">Staff User IDs</div>
+                  <div className="text-lg font-extrabold text-purple-800 mt-0.5">{getUsers().length}</div>
+                  <div className="text-[10px] text-slate-400 font-urdu mt-0.5">صارفین شناختی کوڈز</div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                   <div className="text-[10px] font-bold text-slate-500 uppercase">Cloud Audits</div>
-                  <div className="text-xl font-extrabold text-blue-800 mt-0.5">
+                  <div className="text-lg font-extrabold text-blue-800 mt-0.5">
                     {remoteStats ? remoteStats.audits : '—'}
                   </div>
                   <div className="text-[10px] text-slate-400 font-urdu mt-0.5">کلاؤڈ ریکارڈز</div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase">Last Synced</div>
-                  <div className="text-xs font-bold text-slate-800 mt-1.5 truncate">
-                    {lastSync ? new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase">Real-Time Sync</div>
+                  <div className="text-xs font-bold text-emerald-700 mt-1 truncate">
+                    {lastSync ? new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live (15s)'}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-urdu mt-0.5">آخری ہم وقت سازی</div>
+                  <div className="text-[10px] text-slate-400 font-urdu mt-0.5">ہر 15 سیکنڈ میں فعال</div>
                 </div>
               </div>
 

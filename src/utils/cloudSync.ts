@@ -8,8 +8,8 @@
  * Author: Syed Waqas, Manager MIS (Data Management & ERP Department - FGRF)
  */
 
-import { AuditRecord, WaterProject, RepairItem, MasterHeadsConfig } from '../types/index.ts';
-import { createDefaultCheckpoints } from './auditLogic.ts';
+import { AuditRecord, WaterProject, RepairItem, MasterHeadsConfig, UserProfile } from '../types/index.ts';
+import { createDefaultCheckpoints, PRECONFIGURED_USERS } from './auditLogic.ts';
 import { CountryInfo, mergeGeoHierarchy } from './pakistanGeo.ts';
 import { 
   getAudits, 
@@ -23,7 +23,9 @@ import {
   getGeoHierarchy,
   saveGeoHierarchy,
   getMasterHeads,
-  saveMasterHeads
+  saveMasterHeads,
+  getUsers,
+  saveUsers
 } from './storage.ts';
 
 // Default global cloud relay endpoint for FGRF Water Projects Master Database
@@ -63,6 +65,7 @@ function doGet(e) {
     repairs: [],
     geoHierarchy: [],
     masterHeads: null,
+    users: [],
     lastUpdated: new Date().toISOString(),
     updatedBy: "FGRF-Init"
   };
@@ -76,7 +79,7 @@ function doPost(e) {
   try {
     var incoming = JSON.parse(e.postData.contents);
     var raw = prop.getProperty("FGRF_MASTER_DB");
-    var current = raw ? JSON.parse(raw) : { audits: [], projects: [], repairs: [] };
+    var current = raw ? JSON.parse(raw) : { audits: [], projects: [], repairs: [], users: [] };
     
     // Merge Audits
     var auditsMap = {};
@@ -105,12 +108,23 @@ function doPost(e) {
     (current.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
     (incoming.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
 
+    // Merge Users
+    var usersMap = {};
+    (current.users || []).forEach(function(u) { if (u && u.id) usersMap[String(u.id).toUpperCase()] = u; });
+    (incoming.users || []).forEach(function(u) {
+      if (u && u.id) {
+        var key = String(u.id).toUpperCase();
+        usersMap[key] = Object.assign({}, usersMap[key] || {}, u);
+      }
+    });
+
     var merged = {
       audits: Object.keys(auditsMap).map(function(k) { return auditsMap[k]; }),
       projects: Object.keys(projectsMap).map(function(k) { return projectsMap[k]; }),
       repairs: Object.keys(repairsMap).map(function(k) { return repairsMap[k]; }),
       geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || [],
       masterHeads: incoming.masterHeads || current.masterHeads || null,
+      users: Object.keys(usersMap).map(function(k) { return usersMap[k]; }),
       lastUpdated: new Date().toISOString(),
       updatedBy: incoming.updatedBy || "Field Staff"
     };
@@ -121,6 +135,7 @@ function doPost(e) {
       success: true,
       auditsCount: merged.audits.length,
       projectsCount: merged.projects.length,
+      usersCount: merged.users.length,
       lastUpdated: merged.lastUpdated,
       message: "Central Master Database updated successfully."
     })).setMimeType(ContentService.MimeType.JSON);
@@ -145,6 +160,7 @@ export interface CloudDatabasePayload {
   repairs: RepairItem[];
   geoHierarchy?: CountryInfo[];
   masterHeads?: MasterHeadsConfig;
+  users?: UserProfile[];
   lastUpdated: string;
   updatedBy?: string;
 }
@@ -153,7 +169,9 @@ export interface SyncResult {
   success: boolean;
   newAuditsCount: number;
   newProjectsCount: number;
+  newUsersCount?: number;
   geoUpdated?: boolean;
+  usersUpdated?: boolean;
   message: string;
   timestamp: string;
 }
@@ -271,7 +289,6 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
   // GitHub Raw Master DB CDN (Always live, fast, free!)
   candidateEndpoints.push(`${GITHUB_RAW_MASTER_DB}?t=${Date.now()}`);
   candidateEndpoints.push(`${GITHUB_PAGES_MASTER_DB}?t=${Date.now()}`);
-  candidateEndpoints.push(DEFAULT_CLOUD_API);
 
   for (const url of candidateEndpoints) {
     try {
@@ -312,6 +329,7 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
           : [],
         geoHierarchy: Array.isArray(data.geoHierarchy) ? data.geoHierarchy : undefined,
         masterHeads: (data.masterHeads && typeof data.masterHeads === 'object') ? data.masterHeads : undefined,
+        users: Array.isArray(data.users) && data.users.length > 0 ? data.users : undefined,
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         updatedBy: data.updatedBy
       };
@@ -330,6 +348,7 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     repairs: localRepairs,
     geoHierarchy: getGeoHierarchy(),
     masterHeads: getMasterHeads(),
+    users: getUsers(),
     lastUpdated: getLastSyncTime() || new Date().toISOString(),
     updatedBy: 'Local Cache'
   };
@@ -390,7 +409,8 @@ export async function pushLocalToCloud(
   repairs: RepairItem[] = getRepairs(),
   userId: string = 'FGRF-HQ-01',
   geoHierarchy: CountryInfo[] = getGeoHierarchy(),
-  masterHeads: MasterHeadsConfig = getMasterHeads()
+  masterHeads: MasterHeadsConfig = getMasterHeads(),
+  users: UserProfile[] = getUsers()
 ): Promise<boolean> {
   const endpoint = getCloudSyncEndpoint();
   const ghToken = getGitHubToken();
@@ -401,6 +421,7 @@ export async function pushLocalToCloud(
     repairs,
     geoHierarchy,
     masterHeads,
+    users,
     lastUpdated: new Date().toISOString(),
     updatedBy: userId
   };
@@ -550,16 +571,80 @@ export function mergeRepairs(local: RepairItem[], remote: RepairItem[]): RepairI
   return Array.from(map.values());
 }
 
+/**
+ * Merge local and cloud user ID profiles & access rights
+ */
+export function mergeUsers(local: UserProfile[], remote: UserProfile[]): { merged: UserProfile[]; newCount: number } {
+  const map = new Map<string, UserProfile>();
+
+  // Always seed baseline staff accounts
+  PRECONFIGURED_USERS.forEach((u) => {
+    if (u && u.id) map.set(u.id.toUpperCase(), u);
+  });
+
+  // Local registered users
+  (local || []).forEach((u) => {
+    if (u && u.id) {
+      map.set(u.id.toUpperCase(), u);
+    }
+  });
+
+  let newCount = 0;
+  // Remote registered users
+  (remote || []).forEach((r) => {
+    if (!r || !r.id) return;
+    const key = r.id.toUpperCase();
+    if (!map.has(key)) {
+      map.set(key, r);
+      newCount++;
+    } else {
+      const existing = map.get(key)!;
+      // Preserve local updates or merge remote properties
+      map.set(key, {
+        ...existing,
+        ...r,
+        division: r.division !== undefined ? r.division : existing.division,
+        province: r.province || existing.province,
+        rights: r.rights || existing.rights,
+        status: r.status || existing.status,
+      });
+    }
+  });
+
+  return {
+    merged: Array.from(map.values()),
+    newCount
+  };
+}
+
+export async function publishUsersToCloud(users: UserProfile[] = getUsers(), userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+  saveUsers(users);
+  const success = await pushLocalToCloud(
+    getAudits(),
+    getProjects(),
+    getRepairs(),
+    userId,
+    getGeoHierarchy(),
+    getMasterHeads(),
+    users
+  );
+  syncBus?.postMessage({ type: 'USERS_SYNCED', timestamp: new Date().toISOString() });
+  return success;
+}
+
 export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: string = 'FGRF-HQ-01'): Promise<boolean> {
   saveGeoHierarchy(geo);
-  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, geo, getMasterHeads());
+  const users = getUsers();
+  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, geo, getMasterHeads(), users);
   syncBus?.postMessage({ type: 'GEO_SYNCED', timestamp: new Date().toISOString() });
+  syncBus?.postMessage({ type: 'USERS_SYNCED', timestamp: new Date().toISOString() });
   return success;
 }
 
 export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId: string = 'FGRF-HQ-01'): Promise<boolean> {
   saveMasterHeads(heads);
-  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, getGeoHierarchy(), heads);
+  const users = getUsers();
+  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, getGeoHierarchy(), heads, users);
   syncBus?.postMessage({ type: 'HEADS_SYNCED', timestamp: new Date().toISOString() });
   return success;
 }
@@ -576,22 +661,32 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const localRepairs = getRepairs();
   const localGeo = getGeoHierarchy();
   const localHeads = getMasterHeads();
+  const localUsers = getUsers();
 
   const cloud = await fetchCloudData();
   const remoteAudits = cloud?.audits || [];
   const remoteProjects = cloud?.projects || [];
   const remoteRepairs = cloud?.repairs || [];
+  const remoteUsers = cloud?.users || [];
 
   // Merge records
   const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, remoteAudits);
   const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects);
   const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs);
+  const { merged: mergedUsers, newCount: newUsersCount } = mergeUsers(localUsers, remoteUsers);
 
   // Synchronize Geo Hierarchy from authoritative Cloud Master DB
   let geoUpdated = false;
   if (cloud?.geoHierarchy && Array.isArray(cloud.geoHierarchy) && cloud.geoHierarchy.length > 0) {
     saveGeoHierarchy(cloud.geoHierarchy);
     geoUpdated = true;
+  }
+
+  // Synchronize Users
+  let usersUpdated = false;
+  if (newUsersCount > 0 || (remoteUsers.length > 0 && JSON.stringify(localUsers) !== JSON.stringify(mergedUsers))) {
+    saveUsers(mergedUsers);
+    usersUpdated = true;
   }
 
   // Merge Master Heads
@@ -621,9 +716,10 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   saveAudits(mergedAudits);
   saveProjects(mergedProjects);
   saveRepairs(mergedRepairs);
+  saveUsers(mergedUsers);
 
-  // Push merged back to cloud
-  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), mergedHeads);
+  // Push merged superset back to cloud so other users worldwide get real-time updates
+  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), mergedHeads, mergedUsers);
 
   try {
     localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
@@ -633,16 +729,19 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   if (newAuditsCount > 0) parts.push(`${newAuditsCount} new audit(s)`);
   if (newProjectsCount > 0) parts.push(`${newProjectsCount} new project(s)`);
   if (geoUpdated) parts.push(`locations updated`);
+  if (usersUpdated || newUsersCount > 0) parts.push(`users updated`);
 
   const countMsg = parts.length > 0 
     ? `Received ${parts.join(', ')} from cloud.`
-    : `All records & locations synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects).`;
+    : `All records, locations & staff IDs synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects, ${mergedUsers.length} users).`;
 
   return {
     success: true,
     newAuditsCount,
     newProjectsCount,
+    newUsersCount,
     geoUpdated,
+    usersUpdated,
     message: `Cloud Master DB Live (Online Mode): ${countMsg}`,
     timestamp: new Date().toISOString()
   };
@@ -662,7 +761,7 @@ export async function publishAuditToCloud(audit: AuditRecord, project: WaterProj
     const { merged: mergedProjects } = mergeProjects(currentProjects, [project]);
     const mergedRepairs = mergeRepairs(currentRepairs, repairs);
 
-    return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads());
+    return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads(), getUsers());
   } catch (e) {
     console.warn('[FGRF Cloud Sync] Failed to publish audit to cloud:', e);
     return false;
@@ -671,8 +770,8 @@ export async function publishAuditToCloud(audit: AuditRecord, project: WaterProj
 
 /**
  * Real-time background sync hook:
- * Automatically polls for updates every 3 minutes (prevents quota exhaustion)
- * and syncs on tab focus / window visibility change and BroadcastChannel
+ * Automatically polls for updates every 15 seconds for multi-location users worldwide,
+ * and syncs on tab focus / window visibility change and BroadcastChannel within seconds.
  */
 export function startRealtimeCloudSync(
   onUpdate: (data: { 
@@ -681,8 +780,10 @@ export function startRealtimeCloudSync(
     repairs: RepairItem[]; 
     geoHierarchy: CountryInfo[];
     masterHeads: MasterHeadsConfig;
+    users?: UserProfile[];
     newCount: number;
     geoUpdated?: boolean;
+    usersUpdated?: boolean;
   }) => void,
   userId: string = 'FGRF-HQ-01'
 ): () => void {
@@ -695,15 +796,17 @@ export function startRealtimeCloudSync(
     try {
       const res = await syncAllWithCloud(userId);
       lastSyncTimestamp = Date.now();
-      if (res.success && (res.newAuditsCount > 0 || res.newProjectsCount > 0 || res.geoUpdated)) {
+      if (res.success && (res.newAuditsCount > 0 || res.newProjectsCount > 0 || res.geoUpdated || res.usersUpdated)) {
         onUpdate({
           audits: getAudits(),
           projects: getProjects(),
           repairs: getRepairs(),
           geoHierarchy: getGeoHierarchy(),
           masterHeads: getMasterHeads(),
+          users: getUsers(),
           newCount: res.newAuditsCount,
-          geoUpdated: res.geoUpdated
+          geoUpdated: res.geoUpdated,
+          usersUpdated: res.usersUpdated
         });
       }
     } catch (err) {
@@ -713,15 +816,15 @@ export function startRealtimeCloudSync(
     }
   };
 
-  // Run initial sync after 2 seconds
-  const initialTimer = setTimeout(triggerSync, 2000);
+  // Run initial sync after 800ms
+  const initialTimer = setTimeout(triggerSync, 800);
 
-  // Poll cloud every 3 minutes (180,000ms) - preserves API quota for multi-location users
-  const interval = setInterval(triggerSync, 180000);
+  // Poll cloud every 15 seconds (15,000ms) - real-time sync across worldwide users
+  const interval = setInterval(triggerSync, 15000);
 
-  // Sync on tab focus / window visibility change (if > 1 minute since last sync)
+  // Sync on tab focus / window visibility change (if > 5 seconds since last sync)
   const handleVisibilityOrFocus = () => {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 60000) {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 5000) {
       triggerSync();
     }
   };
@@ -733,17 +836,24 @@ export function startRealtimeCloudSync(
     window.addEventListener('focus', handleVisibilityOrFocus);
   }
 
-  // Cross-tab broadcast listener
+  // Cross-tab broadcast listener for immediate sub-second local sync
   const handleBroadcast = (event: MessageEvent) => {
-    if (event.data?.type === 'DATA_SYNCED' || event.data?.type === 'GEO_SYNCED' || event.data?.type === 'HEADS_SYNCED') {
+    if (
+      event.data?.type === 'DATA_SYNCED' || 
+      event.data?.type === 'GEO_SYNCED' || 
+      event.data?.type === 'HEADS_SYNCED' ||
+      event.data?.type === 'USERS_SYNCED'
+    ) {
       onUpdate({
         audits: getAudits(),
         projects: getProjects(),
         repairs: getRepairs(),
         geoHierarchy: getGeoHierarchy(),
         masterHeads: getMasterHeads(),
+        users: getUsers(),
         newCount: 0,
-        geoUpdated: event.data?.type === 'GEO_SYNCED'
+        geoUpdated: event.data?.type === 'GEO_SYNCED',
+        usersUpdated: event.data?.type === 'USERS_SYNCED'
       });
     }
   };

@@ -1,0 +1,2139 @@
+{
+  "audits": [],
+  "projects": [],
+  "repairs": [],
+  "geoHierarchy": [
+    {
+      "name": "Pakistan",
+      "nameUrdu": "پاکستان",
+      "code": "PK",
+      "flag": "🇵🇰",
+      "centerCoordinates": {
+        "lat": 30.3753,
+        "lng": 69.3451
+      },
+      "provinces": [
+        {
+          "name": "Sindh",
+          "nameUrdu": "سندھ",
+          "divisions": [
+            {
+              "name": "Mirpur Khas",
+              "nameUrdu": "میرپور خاص",
+              "districts": [
+                {
+                  "name": "Tharparkar",
+                  "nameUrdu": "تھرپارکر",
+                  "tehsils": [
+                    "Mithi",
+                    "Islamkot",
+                    "Chachro",
+                    "Nagarparkar",
+                    "Diplo",
+                    "Dahli"
+                  ],
+                  "lat": 24.7397,
+                  "lng": 69.8034
+                },
+                {
+                  "name": "Umerkot",
+                  "nameUrdu": "عمرکوٹ",
+                  "tehsils": [
+                    "Umerkot",
+                    "Pithoro",
+                    "Samaro",
+                    "Kunri"
+                  ],
+                  "lat": 25.3549,
+                  "lng": 69.7374
+                },
+                {
+                  "name": "Mirpur Khas",
+                  "nameUrdu": "میرپور خاص",
+                  "tehsils": [
+                    "Mirpur Khas",
+                    "Digri",
+                    "Kot Ghulam Muhammad",
+                    "Jhuddo",
+                    "Sindhri"
+                  ],
+                  "lat": 25.5276,
+                  "lng": 69.0159
+                }
+              ]
+            },
+            {
+              "name": "Banbhore / Thatta",
+              "nameUrdu": "ٹھٹھہ",
+              "districts": [
+                {
+                  "name": "Thatta",
+                  "nameUrdu": "ٹھٹھہ",
+                  "tehsils": [
+                    "Thatta",
+                    "Mirpur Sakro",
+                    "Ghorabari",
+                    "Keti Bandar"
+                  ],
+                  "lat": 24.7475,
+                  "lng": 67.9235
+                },
+                {
+                  "name": "Sujawal",
+                  "nameUrdu": "سجاول",
+                  "tehsils": [
+                    "Sujawal",
+                    "Jati",
+                    "Shah Bunder",
+                    "Kharo Chan"
+                  ],
+                  "lat": 24.6042,
+                  "lng": 68.0772
+                },
+                {
+                  "name": "Badin",
+                  "nameUrdu": "بدین",
+                  "tehsils": [
+                    "Badin",
+                    "Matli",
+                    "Tando Bago",
+                    "Golarchi",
+                    "Talhar"
+                  ],
+                  "lat": 24.656,
+                  "lng": 68.837
+                }
+              ]
+            },
+            {
+              "name": "Sukkur",
+              "nameUrdu": "سکھر",
+              "districts": [
+                {
+                  "name": "Sukkur",
+                  "nameUrdu": "سکھر",
+                  "tehsils": [
+                    "Sukkur City",
+                    "New Sukkur",
+                    "Rohri",
+                    "Pano Aqil",
+                    "Salehpat"
+                  ],
+                  "lat": 27.7052,
+                  "lng": 68.8574
+                },
+                {
+                  "name": "Khairpur",
+                  "nameUrdu": "خیرپور",
+                  "tehsils": [
+                    "Khairpur",
+                    "Nara",
+                    "Kot Diji",
+                    "Sobhodero",
+                    "Kingri",
+                    "Gambh"
+                  ],
+                  "lat": 27.5295,
+                  "lng": 68.7592
+                }
+              ]
+            },
+            {
+              "name": "Karachi",
+              "nameUrdu": "کراچی",
+              "districts": [
+                {
+                  "name": "Korangi District",
+                  "nameUrdu": "ضلع کورنگی",
+                  "tehsils": [
+                    "Landhi",
+                    "Korangi",
+                    "Shah Faisal",
+                    "Model Colony"
+                  ],
+                  "lat": 24.8485,
+                  "lng": 67.1352
+                },
+                {
+                  "name": "Malir",
+                  "nameUrdu": "ملیر",
+                  "tehsils": [
+                    "Gadap",
+                    "Bin Qasim",
+                    "Murad Memon",
+                    "Ibrahim Hyderi"
+                  ],
+                  "lat": 24.8918,
+                  "lng": 67.1981
+                },
+                {
+                  "name": "Karachi West",
+                  "nameUrdu": "کراچی ویسٹ",
+                  "tehsils": [
+                    "Manghopir",
+                    "Orangi",
+                    "Mominabad"
+                  ],
+                  "lat": 24.9782,
+                  "lng": 67.0142
+                },
+                {
+                  "name": "Karachi Central",
+                  "nameUrdu": "کراچی سینٹرل",
+                  "tehsils": [
+                    "Gulberg",
+                    "Liaquatabad",
+                    "North Nazimabad",
+                    "New Karachi"
+                  ],
+                  "lat": 24.9312,
+                  "lng": 67.0371
+                },
+                {
+                  "name": "Karachi East",
+                  "nameUrdu": "کراچی ایسٹ",
+                  "tehsils": [
+                    "Gulshan-e-Iqbal",
+                    "Jamshed Town",
+                    "Ferozabad"
+                  ],
+                  "lat": 24.9012,
+                  "lng": 67.0911
+                },
+                {
+                  "name": "Karachi South",
+                  "nameUrdu": "کراچی ساؤتھ",
+                  "tehsils": [
+                    "Saddar",
+                    "Aram Bagh",
+                    "Civil Lines",
+                    "Lyari",
+                    "Garden"
+                  ],
+                  "lat": 24.8569,
+                  "lng": 67.0099
+                },
+                {
+                  "name": "Keamari",
+                  "nameUrdu": "کیماڑی",
+                  "tehsils": [
+                    "Keamari",
+                    "Baldia",
+                    "Mauripur",
+                    "Harbour"
+                  ],
+                  "lat": 24.8143,
+                  "lng": 66.9744
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Punjab",
+          "nameUrdu": "پنجاب",
+          "divisions": [
+            {
+              "name": "Lahore",
+              "nameUrdu": "لاہور",
+              "districts": [
+                {
+                  "name": "Lahore",
+                  "nameUrdu": "لاہور",
+                  "tehsils": [
+                    "Lahore City",
+                    "Lahore Cantt",
+                    "Model Town",
+                    "Raiwind",
+                    "Shalimar"
+                  ],
+                  "lat": 31.5204,
+                  "lng": 74.3587
+                },
+                {
+                  "name": "Kasur",
+                  "nameUrdu": "قصور",
+                  "tehsils": [
+                    "Kasur",
+                    "Chunian",
+                    "Pattoki",
+                    "Kot Radha Kishan"
+                  ],
+                  "lat": 31.1179,
+                  "lng": 74.4408
+                }
+              ]
+            },
+            {
+              "name": "Bahawalpur",
+              "nameUrdu": "بہاولپور",
+              "districts": [
+                {
+                  "name": "Bahawalpur",
+                  "nameUrdu": "بہاولپور",
+                  "tehsils": [
+                    "Bahawalpur City",
+                    "Bahawalpur Saddar",
+                    "Ahmedpur East",
+                    "Yazman",
+                    "Khairpur Tamewali"
+                  ],
+                  "lat": 29.3544,
+                  "lng": 71.6911
+                },
+                {
+                  "name": "Rahim Yar Khan",
+                  "nameUrdu": "رحیم یار خان",
+                  "tehsils": [
+                    "Rahim Yar Khan",
+                    "Sadiqabad",
+                    "Liaquatpur",
+                    "Khanpur"
+                  ],
+                  "lat": 28.4202,
+                  "lng": 70.2952
+                }
+              ]
+            },
+            {
+              "name": "Rawalpindi",
+              "nameUrdu": "راولپنڈی",
+              "districts": [
+                {
+                  "name": "Rawalpindi",
+                  "nameUrdu": "راولپنڈی",
+                  "tehsils": [
+                    "Rawalpindi",
+                    "Gujar Khan",
+                    "Taxila",
+                    "Kahuta",
+                    "Murree",
+                    "Kallar Syedan"
+                  ],
+                  "lat": 33.5651,
+                  "lng": 73.0169
+                },
+                {
+                  "name": "Attock",
+                  "nameUrdu": "اٹک",
+                  "tehsils": [
+                    "Attock",
+                    "Fateh Jang",
+                    "Pindi Gheb",
+                    "Jand",
+                    "Hassan Abdal",
+                    "Hazro"
+                  ],
+                  "lat": 33.766,
+                  "lng": 72.3601
+                }
+              ]
+            },
+            {
+              "name": "Dera Ghazi Khan",
+              "nameUrdu": "ڈیرہ غازی خان",
+              "districts": [
+                {
+                  "name": "Dera Ghazi Khan",
+                  "nameUrdu": "ڈیرہ غازی خان",
+                  "tehsils": [
+                    "DG Khan",
+                    "Kot Chutta",
+                    "Taunsa Sharif",
+                    "De-Excluded Area"
+                  ],
+                  "lat": 30.0489,
+                  "lng": 70.6455
+                },
+                {
+                  "name": "Rajanpur",
+                  "nameUrdu": "راجن پور",
+                  "tehsils": [
+                    "Rajanpur",
+                    "Jampur",
+                    "Rojhan"
+                  ],
+                  "lat": 29.1044,
+                  "lng": 70.3257
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Khyber Pakhtunkhwa",
+          "nameUrdu": "خیبر پختونخوا",
+          "divisions": [
+            {
+              "name": "Peshawar",
+              "nameUrdu": "پشاور",
+              "districts": [
+                {
+                  "name": "Peshawar",
+                  "nameUrdu": "پشاور",
+                  "tehsils": [
+                    "Peshawar City",
+                    "Peshawar Saddar",
+                    "Shah Alam",
+                    "Mathra",
+                    "Badhber"
+                  ],
+                  "lat": 34.0151,
+                  "lng": 71.5249
+                },
+                {
+                  "name": "Nowshera",
+                  "nameUrdu": "نوشہرہ",
+                  "tehsils": [
+                    "Nowshera",
+                    "Pabbi",
+                    "Jehangira"
+                  ],
+                  "lat": 34.0153,
+                  "lng": 71.9747
+                }
+              ]
+            },
+            {
+              "name": "Malakand",
+              "nameUrdu": "مالاکنڈ",
+              "districts": [
+                {
+                  "name": "Swat",
+                  "nameUrdu": "سوات",
+                  "tehsils": [
+                    "Babuzai",
+                    "Matta",
+                    "Khwazakhela",
+                    "Barikot",
+                    "Kabal",
+                    "Charbagh",
+                    "Bahrain"
+                  ],
+                  "lat": 35.2227,
+                  "lng": 72.4258
+                }
+              ]
+            },
+            {
+              "name": "Dera Ismail Khan",
+              "nameUrdu": "ڈیرہ اسماعیل خان",
+              "districts": [
+                {
+                  "name": "Dera Ismail Khan",
+                  "nameUrdu": "ڈیرہ اسماعیل خان",
+                  "tehsils": [
+                    "DI Khan",
+                    "Kulachi",
+                    "Daraban",
+                    "Paroa",
+                    "Paharpur"
+                  ],
+                  "lat": 31.8314,
+                  "lng": 70.9019
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Balochistan",
+          "nameUrdu": "بلوچستان",
+          "divisions": [
+            {
+              "name": "Quetta",
+              "nameUrdu": "کوئٹہ",
+              "districts": [
+                {
+                  "name": "Quetta",
+                  "nameUrdu": "کوئٹہ",
+                  "tehsils": [
+                    "Quetta City",
+                    "Quetta Saddar",
+                    "Panjpai",
+                    "Kuchlak"
+                  ],
+                  "lat": 30.1798,
+                  "lng": 66.975
+                },
+                {
+                  "name": "Pishin",
+                  "nameUrdu": "پشین",
+                  "tehsils": [
+                    "Pishin",
+                    "Karezat",
+                    "Barshore",
+                    "Hurramzai"
+                  ],
+                  "lat": 30.5818,
+                  "lng": 66.9961
+                },
+                {
+                  "name": "Killa Abdullah",
+                  "nameUrdu": "قلعہ عبداللہ",
+                  "tehsils": [
+                    "Killa Abdullah",
+                    "Gulistan",
+                    "Dobandi"
+                  ],
+                  "lat": 30.7278,
+                  "lng": 66.6606
+                },
+                {
+                  "name": "Chaman",
+                  "nameUrdu": "چمن",
+                  "tehsils": [
+                    "Chaman City",
+                    "Chaman Saddar"
+                  ],
+                  "lat": 30.921,
+                  "lng": 66.4597
+                }
+              ]
+            },
+            {
+              "name": "Naseerabad",
+              "nameUrdu": "نصیرآباد",
+              "districts": [
+                {
+                  "name": "Naseerabad",
+                  "nameUrdu": "نصیرآباد",
+                  "tehsils": [
+                    "Dera Murad Jamali",
+                    "Tamboo",
+                    "Chattar",
+                    "Baba Kot"
+                  ],
+                  "lat": 28.5466,
+                  "lng": 68.2231
+                },
+                {
+                  "name": "Jaffarabad",
+                  "nameUrdu": "جعفرآباد",
+                  "tehsils": [
+                    "Dera Allah Yar",
+                    "Jhatpat",
+                    "Usta Muhammad"
+                  ],
+                  "lat": 28.4342,
+                  "lng": 68.4507
+                },
+                {
+                  "name": "Jhal Magsi",
+                  "nameUrdu": "جھل مگسی",
+                  "tehsils": [
+                    "Gandawa",
+                    "Jhal Magsi",
+                    "Mirpur"
+                  ],
+                  "lat": 28.2223,
+                  "lng": 67.4839
+                },
+                {
+                  "name": "Sohbatpur",
+                  "nameUrdu": "صحبت پور",
+                  "tehsils": [
+                    "Sohbatpur",
+                    "Faridabad",
+                    "Manjhipur",
+                    "Hairdin"
+                  ],
+                  "lat": 28.5204,
+                  "lng": 68.5428
+                },
+                {
+                  "name": "Kachhi",
+                  "nameUrdu": "کچھی / بولان",
+                  "tehsils": [
+                    "Dhadar",
+                    "Mach",
+                    "Bhag",
+                    "Sani"
+                  ],
+                  "lat": 29.4756,
+                  "lng": 67.6517
+                }
+              ]
+            },
+            {
+              "name": "Makran",
+              "nameUrdu": "مکران",
+              "districts": [
+                {
+                  "name": "Gwadar",
+                  "nameUrdu": "گوادر",
+                  "tehsils": [
+                    "Gwadar",
+                    "Pasni",
+                    "Ormara",
+                    "Jiwani"
+                  ],
+                  "lat": 25.1216,
+                  "lng": 62.3254
+                },
+                {
+                  "name": "Kech",
+                  "nameUrdu": "کیچ / تربت",
+                  "tehsils": [
+                    "Turbat",
+                    "Mand",
+                    "Tump",
+                    "Buleda",
+                    "Dasht"
+                  ],
+                  "lat": 25.9964,
+                  "lng": 63.0789
+                },
+                {
+                  "name": "Panjgur",
+                  "nameUrdu": "پنجگور",
+                  "tehsils": [
+                    "Panjgur",
+                    "Gowargo",
+                    "Gichk",
+                    "Paroom"
+                  ],
+                  "lat": 26.9644,
+                  "lng": 64.0903
+                }
+              ]
+            },
+            {
+              "name": "Kalat",
+              "nameUrdu": "قلات",
+              "districts": [
+                {
+                  "name": "Lasbela",
+                  "nameUrdu": "لسبیلہ",
+                  "tehsils": [
+                    "Hub",
+                    "Uthal",
+                    "Bela",
+                    "Dureji",
+                    "Gaddani",
+                    "Lakhra"
+                  ],
+                  "lat": 25.6883,
+                  "lng": 66.5947
+                },
+                {
+                  "name": "Khuzdar",
+                  "nameUrdu": "خضدار",
+                  "tehsils": [
+                    "Khuzdar",
+                    "Wadh",
+                    "Zehri",
+                    "Nal",
+                    "Moola",
+                    "Karkh"
+                  ],
+                  "lat": 27.8163,
+                  "lng": 66.6177
+                },
+                {
+                  "name": "Kalat",
+                  "nameUrdu": "قلات",
+                  "tehsils": [
+                    "Kalat",
+                    "Mangocher",
+                    "Surab"
+                  ],
+                  "lat": 29.0266,
+                  "lng": 66.5936
+                },
+                {
+                  "name": "Mastung",
+                  "nameUrdu": "مستونگ",
+                  "tehsils": [
+                    "Mastung",
+                    "Dasht",
+                    "Khad Koocha",
+                    "Kardigap"
+                  ],
+                  "lat": 29.7997,
+                  "lng": 66.8455
+                },
+                {
+                  "name": "Awaran",
+                  "nameUrdu": "آواران",
+                  "tehsils": [
+                    "Awaran",
+                    "Jhal Jhao",
+                    "Mashkay",
+                    "Gishkaur"
+                  ],
+                  "lat": 26.4568,
+                  "lng": 65.2314
+                }
+              ]
+            },
+            {
+              "name": "Sibi",
+              "nameUrdu": "سبی",
+              "districts": [
+                {
+                  "name": "Sibi",
+                  "nameUrdu": "سبی",
+                  "tehsils": [
+                    "Sibi",
+                    "Sangan",
+                    "Babra Trikha"
+                  ],
+                  "lat": 29.5543,
+                  "lng": 67.8817
+                },
+                {
+                  "name": "Dera Bugti",
+                  "nameUrdu": "ڈیرہ بگٹی",
+                  "tehsils": [
+                    "Dera Bugti",
+                    "Sui",
+                    "Phelawagh"
+                  ],
+                  "lat": 29.0307,
+                  "lng": 69.1585
+                },
+                {
+                  "name": "Kohlu",
+                  "nameUrdu": "کوہلو",
+                  "tehsils": [
+                    "Kohlu",
+                    "Maiwand",
+                    "Kahan"
+                  ],
+                  "lat": 29.8965,
+                  "lng": 69.2532
+                },
+                {
+                  "name": "Ziarat",
+                  "nameUrdu": "زیارت",
+                  "tehsils": [
+                    "Ziarat",
+                    "Sinjawi"
+                  ],
+                  "lat": 30.3824,
+                  "lng": 67.7256
+                },
+                {
+                  "name": "Harnai",
+                  "nameUrdu": "ہرنائی",
+                  "tehsils": [
+                    "Harnai",
+                    "Shahrag",
+                    "Khoast"
+                  ],
+                  "lat": 30.1008,
+                  "lng": 67.9374
+                }
+              ]
+            },
+            {
+              "name": "Zhob",
+              "nameUrdu": "ژوب",
+              "districts": [
+                {
+                  "name": "Zhob",
+                  "nameUrdu": "ژوب",
+                  "tehsils": [
+                    "Zhob",
+                    "Sambaza",
+                    "Ashwat"
+                  ],
+                  "lat": 31.3417,
+                  "lng": 69.4486
+                },
+                {
+                  "name": "Loralai",
+                  "nameUrdu": "لورالائی",
+                  "tehsils": [
+                    "Loralai",
+                    "Bori",
+                    "Mekhtar"
+                  ],
+                  "lat": 30.3705,
+                  "lng": 68.5979
+                },
+                {
+                  "name": "Killa Saifullah",
+                  "nameUrdu": "قلعہ سیف اللہ",
+                  "tehsils": [
+                    "Killa Saifullah",
+                    "Muslim Bagh",
+                    "Loiband"
+                  ],
+                  "lat": 30.7008,
+                  "lng": 68.3598
+                },
+                {
+                  "name": "Musakhel",
+                  "nameUrdu": "موسیٰ خیل",
+                  "tehsils": [
+                    "Musakhel",
+                    "Kingri",
+                    "Toisar"
+                  ],
+                  "lat": 30.8679,
+                  "lng": 69.8221
+                },
+                {
+                  "name": "Barkhan",
+                  "nameUrdu": "بارکھان",
+                  "tehsils": [
+                    "Barkhan"
+                  ],
+                  "lat": 29.8977,
+                  "lng": 69.5251
+                }
+              ]
+            },
+            {
+              "name": "Rakhshan",
+              "nameUrdu": "رخشان",
+              "districts": [
+                {
+                  "name": "Kharan",
+                  "nameUrdu": "خاران",
+                  "tehsils": [
+                    "Kharan",
+                    "Sar-Kharan",
+                    "Basima"
+                  ],
+                  "lat": 28.5833,
+                  "lng": 65.4167
+                },
+                {
+                  "name": "Nushki",
+                  "nameUrdu": "نوشکی",
+                  "tehsils": [
+                    "Nushki",
+                    "Dak"
+                  ],
+                  "lat": 29.5539,
+                  "lng": 66.0214
+                },
+                {
+                  "name": "Chagai",
+                  "nameUrdu": "چاغی",
+                  "tehsils": [
+                    "Dalbandin",
+                    "Taftan",
+                    "Nok Kundi",
+                    "Chagai"
+                  ],
+                  "lat": 28.8953,
+                  "lng": 64.4072
+                },
+                {
+                  "name": "Washuk",
+                  "nameUrdu": "واشک",
+                  "tehsils": [
+                    "Washuk",
+                    "Besima",
+                    "Mashkel"
+                  ],
+                  "lat": 27.9575,
+                  "lng": 64.7131
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Islamabad Capital Territory",
+          "nameUrdu": "وفاقی دارالحکومت اسلام آباد",
+          "divisions": [
+            {
+              "name": "Islamabad",
+              "nameUrdu": "اسلام آباد",
+              "districts": [
+                {
+                  "name": "Islamabad",
+                  "nameUrdu": "اسلام آباد",
+                  "tehsils": [
+                    "Sihala",
+                    "Nilore",
+                    "Tarlai",
+                    "Bhara Kahu",
+                    "Zone IV Rural"
+                  ],
+                  "lat": 33.6844,
+                  "lng": 73.0479
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Gilgit-Baltistan",
+          "nameUrdu": "گلگت بلتستان",
+          "divisions": [
+            {
+              "name": "Gilgit",
+              "nameUrdu": "گلگت",
+              "districts": [
+                {
+                  "name": "Gilgit",
+                  "nameUrdu": "گلگت",
+                  "tehsils": [
+                    "Gilgit",
+                    "Danyore",
+                    "Juglot"
+                  ],
+                  "lat": 35.9208,
+                  "lng": 74.3089
+                },
+                {
+                  "name": "Skardu",
+                  "nameUrdu": "سکردو",
+                  "tehsils": [
+                    "Skardu",
+                    "Rondu",
+                    "Gultari"
+                  ],
+                  "lat": 35.2971,
+                  "lng": 75.6337
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Azad Jammu & Kashmir",
+          "nameUrdu": "آزاد جموں و کشمیر",
+          "divisions": [
+            {
+              "name": "Muzaffarabad",
+              "nameUrdu": "مظفر آباد",
+              "districts": [
+                {
+                  "name": "Muzaffarabad",
+                  "nameUrdu": "مظفر آباد",
+                  "tehsils": [
+                    "Muzaffarabad",
+                    "Naseerabad",
+                    "Pattika"
+                  ],
+                  "lat": 34.37,
+                  "lng": 73.4711
+                },
+                {
+                  "name": "Mirpur",
+                  "nameUrdu": "میرپور",
+                  "tehsils": [
+                    "Mirpur",
+                    "Dadyal"
+                  ],
+                  "lat": 33.1484,
+                  "lng": 73.7519
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "India",
+      "nameUrdu": "بھارت / انڈیا",
+      "code": "IN",
+      "flag": "🇮🇳",
+      "centerCoordinates": {
+        "lat": 20.5937,
+        "lng": 78.9629
+      },
+      "provinces": [
+        {
+          "name": "Delhi",
+          "nameUrdu": "دہلی",
+          "divisions": [
+            {
+              "name": "Central Delhi",
+              "nameUrdu": "مرکزی دہلی",
+              "districts": [
+                {
+                  "name": "Central Delhi District",
+                  "nameUrdu": "ضلع وسطی دہلی",
+                  "tehsils": [
+                    "Karol Bagh",
+                    "Kotwali",
+                    "Civil Lines",
+                    "Pahar Ganj"
+                  ],
+                  "lat": 28.6448,
+                  "lng": 77.2167
+                },
+                {
+                  "name": "New Delhi District",
+                  "nameUrdu": "ضلع نئی دہلی",
+                  "tehsils": [
+                    "Chanakyapuri",
+                    "Connaught Place",
+                    "Parliament Street",
+                    "Delhi Cantt"
+                  ],
+                  "lat": 28.6139,
+                  "lng": 77.209
+                }
+              ]
+            },
+            {
+              "name": "South Delhi",
+              "nameUrdu": "جنوبی دہلی",
+              "districts": [
+                {
+                  "name": "South Delhi District",
+                  "nameUrdu": "ضلع جنوبی دہلی",
+                  "tehsils": [
+                    "Hauz Khas",
+                    "Mehrauli",
+                    "Saket"
+                  ],
+                  "lat": 28.5355,
+                  "lng": 77.199
+                },
+                {
+                  "name": "South East Delhi District",
+                  "nameUrdu": "ضلع جنوب مشرقی دہلی",
+                  "tehsils": [
+                    "Defence Colony",
+                    "Kalkaji",
+                    "Sarita Vihar",
+                    "Okhla"
+                  ],
+                  "lat": 28.5629,
+                  "lng": 77.2435
+                }
+              ]
+            },
+            {
+              "name": "East Delhi",
+              "nameUrdu": "مشرقی دہلی",
+              "districts": [
+                {
+                  "name": "East Delhi District",
+                  "nameUrdu": "ضلع مشرقی دہلی",
+                  "tehsils": [
+                    "Preet Vihar",
+                    "Gandhi Nagar",
+                    "Mayur Vihar"
+                  ],
+                  "lat": 28.6279,
+                  "lng": 77.2789
+                },
+                {
+                  "name": "Shahdara District",
+                  "nameUrdu": "ضلع شاہدرہ",
+                  "tehsils": [
+                    "Shahdara",
+                    "Seemapuri",
+                    "Vivek Vihar"
+                  ],
+                  "lat": 28.6738,
+                  "lng": 77.2917
+                }
+              ]
+            },
+            {
+              "name": "North Delhi",
+              "nameUrdu": "شمالی دہلی",
+              "districts": [
+                {
+                  "name": "North Delhi District",
+                  "nameUrdu": "ضلع شمالی دہلی",
+                  "tehsils": [
+                    "Alipur",
+                    "Model Town",
+                    "Narela"
+                  ],
+                  "lat": 28.7182,
+                  "lng": 77.1706
+                },
+                {
+                  "name": "North West Delhi District",
+                  "nameUrdu": "ضلع شمال مغربی دہلی",
+                  "tehsils": [
+                    "Rohini",
+                    "Kanjhawala",
+                    "Saraswati Vihar"
+                  ],
+                  "lat": 28.73,
+                  "lng": 77.12
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Maharashtra",
+          "nameUrdu": "مہاراشٹر",
+          "divisions": [
+            {
+              "name": "Konkan / Mumbai",
+              "nameUrdu": "کونکن / ممبئی",
+              "districts": [
+                {
+                  "name": "Mumbai Suburban District",
+                  "nameUrdu": "ممبئی مضافاتی ضلع",
+                  "tehsils": [
+                    "Kurla",
+                    "Andheri",
+                    "Borivali",
+                    "Bandra",
+                    "Ghatkopar"
+                  ],
+                  "lat": 19.076,
+                  "lng": 72.8777
+                },
+                {
+                  "name": "Mumbai City District",
+                  "nameUrdu": "ضلع ممبئی سٹی",
+                  "tehsils": [
+                    "Colaba",
+                    "Byculla",
+                    "Dadar",
+                    "Worli",
+                    "Malabar Hill"
+                  ],
+                  "lat": 18.922,
+                  "lng": 72.8346
+                },
+                {
+                  "name": "Thane District",
+                  "nameUrdu": "ضلع تھانے",
+                  "tehsils": [
+                    "Thane",
+                    "Kalyan",
+                    "Bhiwandi",
+                    "Mumbra",
+                    "Ulhasnagar"
+                  ],
+                  "lat": 19.2183,
+                  "lng": 72.9781
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Uttar Pradesh",
+          "nameUrdu": "اتر پردیش",
+          "divisions": [
+            {
+              "name": "Meerut",
+              "nameUrdu": "میرٹھ",
+              "districts": [
+                {
+                  "name": "Meerut District",
+                  "nameUrdu": "ضلع میرٹھ",
+                  "tehsils": [
+                    "Meerut City",
+                    "Mawana",
+                    "Sardhana"
+                  ],
+                  "lat": 28.9845,
+                  "lng": 77.7064
+                },
+                {
+                  "name": "Ghaziabad District",
+                  "nameUrdu": "ضلع غازی آباد",
+                  "tehsils": [
+                    "Ghaziabad",
+                    "Modinagar",
+                    "Loni"
+                  ],
+                  "lat": 28.6692,
+                  "lng": 77.4538
+                }
+              ]
+            },
+            {
+              "name": "Lucknow",
+              "nameUrdu": "لکھنؤ",
+              "districts": [
+                {
+                  "name": "Lucknow District",
+                  "nameUrdu": "ضلع لکھنؤ",
+                  "tehsils": [
+                    "Lucknow",
+                    "Mohanlalganj",
+                    "Bakshi Ka Talab",
+                    "Malihabad"
+                  ],
+                  "lat": 26.8467,
+                  "lng": 80.9462
+                }
+              ]
+            },
+            {
+              "name": "Agra",
+              "nameUrdu": "آگرہ",
+              "districts": [
+                {
+                  "name": "Agra District",
+                  "nameUrdu": "ضلع آگرہ",
+                  "tehsils": [
+                    "Agra",
+                    "Fatehabad",
+                    "Kiraoli",
+                    "Bah"
+                  ],
+                  "lat": 27.1767,
+                  "lng": 78.0081
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Gujarat",
+          "nameUrdu": "گجرات",
+          "divisions": [
+            {
+              "name": "Ahmedabad",
+              "nameUrdu": "احمد آباد",
+              "districts": [
+                {
+                  "name": "Ahmedabad District",
+                  "nameUrdu": "ضلع احمد آباد",
+                  "tehsils": [
+                    "Ahmedabad City",
+                    "Daskroi",
+                    "Sanand",
+                    "Dholka"
+                  ],
+                  "lat": 23.0225,
+                  "lng": 72.5714
+                }
+              ]
+            },
+            {
+              "name": "Surat",
+              "nameUrdu": "سورت",
+              "districts": [
+                {
+                  "name": "Surat District",
+                  "nameUrdu": "ضلع سورت",
+                  "tehsils": [
+                    "Surat City",
+                    "Olpad",
+                    "Bardoli",
+                    "Chorasi"
+                  ],
+                  "lat": 21.1702,
+                  "lng": 72.8311
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Rajasthan",
+          "nameUrdu": "راجستھان",
+          "divisions": [
+            {
+              "name": "Jaipur",
+              "nameUrdu": "جے پور",
+              "districts": [
+                {
+                  "name": "Jaipur District",
+                  "nameUrdu": "ضلع جے پور",
+                  "tehsils": [
+                    "Jaipur City",
+                    "Sanganer",
+                    "Amer",
+                    "Chomu"
+                  ],
+                  "lat": 26.9124,
+                  "lng": 75.7873
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bangladesh",
+      "nameUrdu": "بنگلہ دیش",
+      "code": "BD",
+      "flag": "🇧🇩",
+      "centerCoordinates": {
+        "lat": 23.685,
+        "lng": 90.3563
+      },
+      "provinces": [
+        {
+          "name": "Dhaka Division",
+          "nameUrdu": "ڈھاکہ ڈویژن",
+          "divisions": [
+            {
+              "name": "Dhaka Region",
+              "nameUrdu": "ڈھاکہ ریجن",
+              "districts": [
+                {
+                  "name": "Dhaka District",
+                  "nameUrdu": "ضلع ڈھاکہ",
+                  "tehsils": [
+                    "Dhanmondi",
+                    "Mirpur",
+                    "Gulshan",
+                    "Mohammadpur",
+                    "Savar"
+                  ],
+                  "lat": 23.8103,
+                  "lng": 90.4125
+                },
+                {
+                  "name": "Gazipur District",
+                  "nameUrdu": "ضلع غازی پور",
+                  "tehsils": [
+                    "Gazipur Sadar",
+                    "Kaliakair",
+                    "Kapasia",
+                    "Sreepur"
+                  ],
+                  "lat": 24.0023,
+                  "lng": 90.4264
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Chittagong Division",
+          "nameUrdu": "چٹاگانگ ڈویژن",
+          "divisions": [
+            {
+              "name": "Chittagong Region",
+              "nameUrdu": "چٹاگانگ ریجن",
+              "districts": [
+                {
+                  "name": "Chittagong District",
+                  "nameUrdu": "ضلع چٹاگانگ",
+                  "tehsils": [
+                    "Panchlaish",
+                    "Kotwali",
+                    "Double Mooring",
+                    "Hathazari"
+                  ],
+                  "lat": 22.3569,
+                  "lng": 91.7832
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Sylhet Division",
+          "nameUrdu": "سلہٹ ڈویژن",
+          "divisions": [
+            {
+              "name": "Sylhet Region",
+              "nameUrdu": "سلہٹ ریجن",
+              "districts": [
+                {
+                  "name": "Sylhet District",
+                  "nameUrdu": "ضلع سلہٹ",
+                  "tehsils": [
+                    "Sylhet Sadar",
+                    "Beanibazar",
+                    "Golapganj",
+                    "Zakiganj"
+                  ],
+                  "lat": 24.8949,
+                  "lng": 91.8687
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kenya",
+      "nameUrdu": "کینیا",
+      "code": "KE",
+      "flag": "🇰🇪",
+      "centerCoordinates": {
+        "lat": -0.0236,
+        "lng": 37.9062
+      },
+      "provinces": [
+        {
+          "name": "Nairobi Region",
+          "nameUrdu": "نیروبی ریجن",
+          "divisions": [
+            {
+              "name": "Nairobi Central",
+              "nameUrdu": "مرکزی نیروبی",
+              "districts": [
+                {
+                  "name": "Nairobi County District",
+                  "nameUrdu": "نیروبی کاؤنٹی ضلع",
+                  "tehsils": [
+                    "Westlands",
+                    "Dagoretti",
+                    "Kibra",
+                    "Embakasi",
+                    "Starehe"
+                  ],
+                  "lat": -1.2921,
+                  "lng": 36.8219
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Coast Region",
+          "nameUrdu": "ساحلی ریجن",
+          "divisions": [
+            {
+              "name": "Mombasa Division",
+              "nameUrdu": "ممباسا ڈویژن",
+              "districts": [
+                {
+                  "name": "Mombasa County District",
+                  "nameUrdu": "ضلع ممباسا",
+                  "tehsils": [
+                    "Mvita",
+                    "Nyali",
+                    "Kisauni",
+                    "Likoni",
+                    "Changamwe"
+                  ],
+                  "lat": -4.0435,
+                  "lng": 39.6682
+                },
+                {
+                  "name": "Garissa District",
+                  "nameUrdu": "ضلع غاریسا",
+                  "tehsils": [
+                    "Garissa Central",
+                    "Dadaab",
+                    "Balambala",
+                    "Fafi"
+                  ],
+                  "lat": -0.4532,
+                  "lng": 39.646
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Uganda",
+      "nameUrdu": "یوگنڈا",
+      "code": "UG",
+      "flag": "🇺🇬",
+      "centerCoordinates": {
+        "lat": 1.3733,
+        "lng": 32.2903
+      },
+      "provinces": [
+        {
+          "name": "Central Region",
+          "nameUrdu": "مرکزی ریجن",
+          "divisions": [
+            {
+              "name": "Kampala Division",
+              "nameUrdu": "کمپالا ڈویژن",
+              "districts": [
+                {
+                  "name": "Kampala District",
+                  "nameUrdu": "ضلع کمپالا",
+                  "tehsils": [
+                    "Central Kampala",
+                    "Kawempe",
+                    "Makindye",
+                    "Nakawa",
+                    "Rubaga"
+                  ],
+                  "lat": 0.3476,
+                  "lng": 32.5825
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Eastern Region",
+          "nameUrdu": "مشرقی ریجن",
+          "divisions": [
+            {
+              "name": "Jinja Division",
+              "nameUrdu": "جنجا ڈویژن",
+              "districts": [
+                {
+                  "name": "Jinja District",
+                  "nameUrdu": "ضلع جنجا",
+                  "tehsils": [
+                    "Jinja Central",
+                    "Butembe",
+                    "Kagoma"
+                  ],
+                  "lat": 0.4479,
+                  "lng": 33.2026
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "United Kingdom",
+      "nameUrdu": "برطانیہ",
+      "code": "GB",
+      "flag": "🇬🇧",
+      "centerCoordinates": {
+        "lat": 55.3781,
+        "lng": -3.436
+      },
+      "provinces": [
+        {
+          "name": "England",
+          "nameUrdu": "انگلستان",
+          "divisions": [
+            {
+              "name": "Greater London",
+              "nameUrdu": "گریٹر لندن",
+              "districts": [
+                {
+                  "name": "Central London District",
+                  "nameUrdu": "وسطی لندن",
+                  "tehsils": [
+                    "City of Westminster",
+                    "Camden",
+                    "Islington",
+                    "Kensington"
+                  ],
+                  "lat": 51.5074,
+                  "lng": -0.1278
+                },
+                {
+                  "name": "East London District",
+                  "nameUrdu": "مشرقی لندن",
+                  "tehsils": [
+                    "Tower Hamlets",
+                    "Newham",
+                    "Waltham Forest",
+                    "Barking"
+                  ],
+                  "lat": 51.52,
+                  "lng": -0.03
+                }
+              ]
+            },
+            {
+              "name": "West Midlands",
+              "nameUrdu": "ویسٹ مڈلینڈز",
+              "districts": [
+                {
+                  "name": "Birmingham District",
+                  "nameUrdu": "برمنگھم",
+                  "tehsils": [
+                    "City Centre",
+                    "Sparkbrook",
+                    "Hall Green",
+                    "Aston"
+                  ],
+                  "lat": 52.4862,
+                  "lng": -1.8904
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "masterHeads": {
+    "categories": [
+      "Filter Hand Pump",
+      "Hand Pump",
+      "Solar Submersible Pump",
+      "Deep Tube Well",
+      "Aab-e-Kausar Water Filtration Plant",
+      "Reverse Osmosis (RO) Plant",
+      "Community Water Storage Tank"
+    ],
+    "conditions": [
+      {
+        "id": "Functional",
+        "labelEn": "Functional",
+        "labelUrdu": "مکمل فعال / درست",
+        "color": "emerald",
+        "isSystem": true
+      },
+      {
+        "id": "Functional – Repair Needed",
+        "labelEn": "Functional – Repair Needed",
+        "labelUrdu": "فعال مگر مرمت درکار",
+        "color": "amber",
+        "isSystem": true
+      },
+      {
+        "id": "Non-functional",
+        "labelEn": "Non-functional",
+        "labelUrdu": "غیر فعال / بند",
+        "color": "rose",
+        "isSystem": true
+      },
+      {
+        "id": "Not Installed / Wrong Location",
+        "labelEn": "Not Installed / Wrong Location",
+        "labelUrdu": "غیر نصب شدہ / غلط مقام",
+        "color": "slate",
+        "isSystem": true
+      }
+    ],
+    "questions": [
+      {
+        "id": 1,
+        "number": 1,
+        "titleEn": "Installed at approved / recorded location",
+        "titleUrdu": "پمپ منظور شدہ / ریکارڈ شدہ مقام پر نصب ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "number": 2,
+        "titleEn": "Pump installed correctly; firm, stable and vertical",
+        "titleUrdu": "پمپ درست طریقے سے، مضبوط اور سیدھا نصب ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "number": 3,
+        "titleEn": "Platform / apron intact; no cracks or standing water",
+        "titleUrdu": "پلیٹ فارم / فرش درست ہے؛ دراڑ یا کھڑا پانی نہیں",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "number": 4,
+        "titleEn": "Drainage channel present, clear and directing water away",
+        "titleUrdu": "نکاسی آب کی نالی موجود، صاف اور پانی کو دور لے جاتی ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "number": 5,
+        "titleEn": "Pump handle, rod, bolts and fittings working properly",
+        "titleUrdu": "ہینڈل، راڈ، بولٹ اور فٹنگز درست کام کر رہے ہیں",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "number": 6,
+        "titleEn": "Water starts flowing and discharge is adequate",
+        "titleUrdu": "پمپ سے پانی آتا ہے اور اخراج مناسب ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "number": 7,
+        "titleEn": "Water is visibly clear; no unusual colour / smell",
+        "titleUrdu": "پانی بظاہر صاف ہے؛ غیر معمولی رنگ یا بو نہیں",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "number": 8,
+        "titleEn": "Water drains after use; no stagnant / pooled water",
+        "titleUrdu": "استعمال کے بعد پانی نکل جاتا ہے؛ پانی کھڑا نہیں رہتا",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Yes",
+            "labelEn": "Yes",
+            "labelUrdu": "ہاں"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "number": 9,
+        "titleEn": "Community is using the pump regularly",
+        "titleUrdu": "کمیونٹی پمپ باقاعدگی سے استعمال کرتی ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "Regular",
+            "labelEn": "Regular",
+            "labelUrdu": "باقاعدہ"
+          },
+          {
+            "value": "Occasional",
+            "labelEn": "Occasional",
+            "labelUrdu": "کبھی کبھار"
+          },
+          {
+            "value": "No",
+            "labelEn": "No",
+            "labelUrdu": "نہیں"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "number": 10,
+        "titleEn": "Women / children / vulnerable users have safe access",
+        "titleUrdu": "خواتین، بچوں اور کمزور افراد کے لیے محفوظ رسائی ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "OK",
+            "labelEn": "OK",
+            "labelUrdu": "درست"
+          },
+          {
+            "value": "Due",
+            "labelEn": "Due",
+            "labelUrdu": "درکار"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "number": 11,
+        "titleEn": "Area clean; no waste, animal contamination or hazards",
+        "titleUrdu": "جگہ صاف ہے؛ کچرا، جانوروں کی آلودگی یا خطرہ نہیں",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "OK",
+            "labelEn": "OK",
+            "labelUrdu": "درست"
+          },
+          {
+            "value": "Due",
+            "labelEn": "Due",
+            "labelUrdu": "درکار"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "number": 12,
+        "titleEn": "Beneficiary knows basic operation and reporting contact",
+        "titleUrdu": "مستفید افراد کو استعمال اور شکایت درج کرانے کا طریقہ معلوم ہے",
+        "category": "all",
+        "region": "all",
+        "options": [
+          {
+            "value": "OK",
+            "labelEn": "OK",
+            "labelUrdu": "درست"
+          },
+          {
+            "value": "Due",
+            "labelEn": "Due",
+            "labelUrdu": "درکار"
+          },
+          {
+            "value": "N/A",
+            "labelEn": "N/A",
+            "labelUrdu": "لاگو نہیں"
+          }
+        ]
+      }
+    ]
+  },
+  "lastUpdated": "2026-11-19T11:48:02.617Z",
+  "updatedBy": "Syed Waqas, Manager MIS (Data Management & ERP Department)",
+  "users": [
+    {
+      "id": "42101-1234567-1",
+      "name": "Syed Waqas",
+      "role": "super_admin",
+      "designation": "Manager MIS – Data Management & ERP Department",
+      "email": "waqas.mis@fgrf.org",
+      "phone": "+92 300 1234567",
+      "password": "admin123",
+      "status": "active",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": true,
+        "canDeleteInspection": true,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": true,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": true,
+        "canManageUsers": true,
+        "canViewActivityLogs": true
+      }
+    },
+    {
+      "id": "FGRF-HQ-01",
+      "name": "Muhammad Farooq Attari",
+      "role": "super_admin",
+      "designation": "Head of Audit & Monitoring – FGRF Central",
+      "email": "audit.head@fgrf.org",
+      "phone": "+92 300 1234567",
+      "password": "admin123",
+      "status": "active",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": true,
+        "canDeleteInspection": true,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": true,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": true,
+        "canManageUsers": true,
+        "canViewActivityLogs": true
+      }
+    },
+    {
+      "id": "FGRF-MIS-01",
+      "name": "Syed Waqas",
+      "role": "super_admin",
+      "designation": "Manager MIS – Head Office",
+      "email": "waqas.mis@fgrf.org",
+      "phone": "+92 300 1234567",
+      "password": "admin123",
+      "status": "active",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": true,
+        "canDeleteInspection": true,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": true,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": true,
+        "canManageUsers": true,
+        "canViewActivityLogs": true
+      }
+    },
+    {
+      "id": "FGRF-NAT-02",
+      "name": "Engr. Tariq Mahmood",
+      "role": "national_mgmt",
+      "designation": "National Water Projects Director",
+      "email": "water.director@fgrf.org",
+      "phone": "+92 321 9876543",
+      "status": "active",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "rights": {
+        "canCreateInspection": false,
+        "canEditInspection": true,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": false,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": true
+      }
+    },
+    {
+      "id": "FGRF-SND-01",
+      "name": "Syed Naveed Shah",
+      "role": "provincial_coord",
+      "designation": "Sindh Provincial Coordinator",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "email": "coord.sindh@fgrf.org",
+      "phone": "+92 333 4567890",
+      "status": "active",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": true,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": false,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": false
+      }
+    },
+    {
+      "id": "FGRF-PUN-01",
+      "name": "Hafiz Bilal Ahmed",
+      "role": "provincial_coord",
+      "designation": "Punjab Provincial Coordinator",
+      "province": "Punjab",
+      "division": "All Divisions",
+      "email": "coord.punjab@fgrf.org",
+      "phone": "+92 301 5551234",
+      "status": "active",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": true,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": true,
+        "canManageRepairs": true,
+        "canCreateProject": true,
+        "canDeleteProject": false,
+        "canExportReports": true,
+        "canAccessDashboard": true,
+        "canAccessMap": true,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": false
+      }
+    },
+    {
+      "id": "FGRF-INS-101",
+      "name": "Zubair Raza",
+      "role": "field_inspector",
+      "designation": "Senior Field Inspector (Thatta & Badin)",
+      "province": "Sindh",
+      "division": "Banbhore",
+      "district": "Thatta",
+      "email": "inspector.zubair@fgrf.org",
+      "phone": "+92 345 7778899",
+      "status": "active",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": false,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": false,
+        "canManageRepairs": false,
+        "canCreateProject": false,
+        "canDeleteProject": false,
+        "canExportReports": false,
+        "canAccessDashboard": false,
+        "canAccessMap": false,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": false
+      }
+    },
+    {
+      "id": "FGRF-INS-102",
+      "name": "Abdul Rehman",
+      "role": "field_inspector",
+      "designation": "Field Inspector (Tharparkar Desert)",
+      "province": "Sindh",
+      "division": "Mirpur Khas",
+      "district": "Tharparkar",
+      "email": "inspector.rehman@fgrf.org",
+      "phone": "+92 312 3344556",
+      "status": "active",
+      "rights": {
+        "canCreateInspection": true,
+        "canEditInspection": false,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": false,
+        "canManageRepairs": false,
+        "canCreateProject": false,
+        "canDeleteProject": false,
+        "canExportReports": false,
+        "canAccessDashboard": false,
+        "canAccessMap": false,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": false
+      }
+    },
+    {
+      "id": "FGRF-REP-01",
+      "name": "Ustad Shaukat Ali",
+      "role": "repair_team",
+      "designation": "Regional Maintenance Lead",
+      "province": "Sindh",
+      "division": "All Divisions",
+      "email": "repairs.shaukat@fgrf.org",
+      "phone": "+92 334 1122334",
+      "status": "active",
+      "rights": {
+        "canCreateInspection": false,
+        "canEditInspection": false,
+        "canDeleteInspection": false,
+        "canReviewAndApprove": false,
+        "canManageRepairs": true,
+        "canCreateProject": false,
+        "canDeleteProject": false,
+        "canExportReports": false,
+        "canAccessDashboard": false,
+        "canAccessMap": false,
+        "canManageOpenHeads": false,
+        "canManageUsers": false,
+        "canViewActivityLogs": false
+      }
+    }
+  ]
+}

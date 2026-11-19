@@ -298,6 +298,9 @@ export function createUser(user: UserProfile): UserProfile[] {
     users.push(user);
   }
   saveUsers(users);
+  import('./cloudSync.ts').then((cs) => {
+    cs.publishUsersToCloud(users, user.id).catch(() => {});
+  }).catch(() => {});
   return users;
 }
 
@@ -307,18 +310,83 @@ export function updateUser(updatedUser: UserProfile): UserProfile[] {
   if (index >= 0) {
     users[index] = updatedUser;
     saveUsers(users);
+    import('./cloudSync.ts').then((cs) => {
+      cs.publishUsersToCloud(users, updatedUser.id).catch(() => {});
+    }).catch(() => {});
   }
   return users;
 }
 
 export function deleteUser(userId: string): { success: boolean; error?: string; users: UserProfile[] } {
-  if (userId === 'FGRF-HQ-01') {
+  if (userId === 'FGRF-HQ-01' || userId === '42101-1234567-1') {
     return { success: false, error: 'Cannot delete the primary Super Administrator account.', users: getUsers() };
   }
   const users = getUsers();
   const filtered = users.filter((u) => u.id !== userId);
   saveUsers(filtered);
+  import('./cloudSync.ts').then((cs) => {
+    cs.publishUsersToCloud(filtered, userId).catch(() => {});
+  }).catch(() => {});
   return { success: true, users: filtered };
+}
+
+/**
+ * Cascade location rename or deletion to all user ID jurisdictions
+ * Ensures user profiles stay integrated with dynamic geographical hierarchy
+ */
+export function cascadeLocationChangeToUsers(
+  level: 'province' | 'division' | 'district',
+  action: 'edit' | 'delete',
+  oldName: string,
+  newName?: string
+): UserProfile[] {
+  const users = getUsers();
+  let modified = false;
+
+  const updatedUsers = users.map((u) => {
+    const copy = { ...u };
+    if (level === 'province') {
+      if (u.province && u.province.trim().toLowerCase() === oldName.trim().toLowerCase()) {
+        if (action === 'edit' && newName) {
+          copy.province = newName.trim();
+          modified = true;
+        } else if (action === 'delete') {
+          copy.province = 'Sindh'; // fallback default province
+          copy.division = 'All Divisions';
+          modified = true;
+        }
+      }
+    } else if (level === 'division') {
+      if (u.division && u.division.trim().toLowerCase() === oldName.trim().toLowerCase()) {
+        if (action === 'edit' && newName) {
+          copy.division = newName.trim();
+          modified = true;
+        } else if (action === 'delete') {
+          copy.division = 'All Divisions';
+          modified = true;
+        }
+      }
+    } else if (level === 'district') {
+      if (u.district && u.district.trim().toLowerCase() === oldName.trim().toLowerCase()) {
+        if (action === 'edit' && newName) {
+          copy.district = newName.trim();
+          modified = true;
+        } else if (action === 'delete') {
+          copy.district = '';
+          modified = true;
+        }
+      }
+    }
+    return copy;
+  });
+
+  if (modified) {
+    saveUsers(updatedUsers);
+    import('./cloudSync.ts').then((cs) => {
+      cs.publishUsersToCloud(updatedUsers).catch(() => {});
+    }).catch(() => {});
+  }
+  return updatedUsers;
 }
 
 export function getCurrentUser(): UserProfile {
