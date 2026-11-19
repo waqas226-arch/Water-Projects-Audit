@@ -181,7 +181,7 @@ export const UserIdModal: React.FC<UserIdModalProps> = ({
                     <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-slate-400" />
-                        {user.province ? `${user.province}${user.district ? ` (${user.district})` : ''}` : 'National (All Pakistan)'}
+                        {user.province ? `${user.province}${user.division && user.division !== 'All Divisions' ? ` • ${user.division}` : (user.district ? ` (${user.district})` : '')}` : 'National (All Pakistan)'}
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     </div>

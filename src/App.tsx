@@ -722,6 +722,7 @@ export default function App() {
           <UserManagementView
             users={users}
             currentUser={currentUser}
+            geoHierarchy={geoHierarchy}
             onCreateUser={handleCreateUser}
             onUpdateUser={handleUpdateUser}
             onDeleteUser={handleDeleteUser}

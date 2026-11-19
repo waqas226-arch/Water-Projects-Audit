@@ -22,11 +22,13 @@ import {
 } from 'lucide-react';
 import { UserProfile, UserRights, UserRole } from '../types/index.ts';
 import { getDefaultRightsForRole, validateUserId } from '../utils/auditLogic.ts';
-import { PAKISTAN_PROVINCES } from '../utils/pakistanGeo.ts';
+import { PAKISTAN_PROVINCES, CountryInfo } from '../utils/pakistanGeo.ts';
+import { getGeoHierarchy } from '../utils/storage.ts';
 
 interface UserManagementViewProps {
   users: UserProfile[];
   currentUser: UserProfile;
+  geoHierarchy?: CountryInfo[];
   onCreateUser: (newUser: UserProfile) => void;
   onUpdateUser: (updatedUser: UserProfile) => void;
   onDeleteUser: (userId: string) => void;
@@ -35,6 +37,7 @@ interface UserManagementViewProps {
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
   users = [],
   currentUser,
+  geoHierarchy,
   onCreateUser,
   onUpdateUser,
   onDeleteUser,
@@ -58,7 +61,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [formRole, setFormRole] = useState<UserRole>('field_inspector');
   const [formDesignation, setFormDesignation] = useState('');
   const [formProvince, setFormProvince] = useState('Sindh');
-  const [formDistrict, setFormDistrict] = useState('Thatta');
+  const [formDivision, setFormDivision] = useState('All Divisions');
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formStatus, setFormStatus] = useState<'active' | 'suspended'>('active');
@@ -83,6 +86,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
           (u.name || '').toLowerCase().includes(q) ||
           (u.email || '').toLowerCase().includes(q) ||
           (u.designation || '').toLowerCase().includes(q) ||
+          (u.province && u.province.toLowerCase().includes(q)) ||
+          (u.division && u.division.toLowerCase().includes(q)) ||
           (u.district && u.district.toLowerCase().includes(q));
         if (!match) return false;
       }
@@ -90,9 +95,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     });
   }, [safeUsers, filterRole, filterProvince, filterStatus, searchQuery]);
 
-  // Province dropdown
-  const selectedProvObj = PAKISTAN_PROVINCES.find((p) => p.name === formProvince) || PAKISTAN_PROVINCES[0];
-  const allDistrictsInFormProv = selectedProvObj.divisions.flatMap((d) => d.districts);
+  // Dynamic Geographic Hierarchy for Provinces and Divisions
+  const resolvedGeo = geoHierarchy || getGeoHierarchy();
+  const pakistanCountry = resolvedGeo.find((c) => c.name === 'Pakistan') || resolvedGeo[0];
+  const availableProvinces = pakistanCountry?.provinces || PAKISTAN_PROVINCES;
+
+  const selectedProvObj = availableProvinces.find((p) => p.name === formProvince) || availableProvinces[0];
+  const divisionsInFormProv = selectedProvObj?.divisions || [];
 
   // Handle open create modal
   const handleOpenCreate = () => {
@@ -103,7 +112,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setFormRole('field_inspector');
     setFormDesignation('Field Water Inspector');
     setFormProvince('Sindh');
-    setFormDistrict('Thatta');
+    setFormDivision('All Divisions');
     setFormEmail('');
     setFormPhone('');
     setFormStatus('active');
@@ -165,7 +174,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       role: formRole,
       designation: formDesignation.trim() || 'FGRF Staff Member',
       province: formRole === 'super_admin' || formRole === 'national_mgmt' || formRole === 'viewer' ? undefined : formProvince,
-      district: formRole === 'field_inspector' ? formDistrict : undefined,
+      division: formRole === 'super_admin' || formRole === 'national_mgmt' || formRole === 'viewer' ? undefined : formDivision,
       email: formEmail.trim() || `${formId.toLowerCase()}@fgrf.org`,
       phone: formPhone.trim() || '+92 300 0000000',
       status: formStatus,
@@ -188,7 +197,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setFormRole(user.role);
     setFormDesignation(user.designation);
     setFormProvince(user.province || 'Sindh');
-    setFormDistrict(user.district || 'Thatta');
+    setFormDivision(user.division || 'All Divisions');
     setFormEmail(user.email);
     setFormPhone(user.phone);
     setFormStatus(user.status || 'active');
@@ -219,7 +228,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       role: formRole,
       designation: formDesignation.trim(),
       province: formRole === 'super_admin' || formRole === 'national_mgmt' || formRole === 'viewer' ? undefined : formProvince,
-      district: formRole === 'field_inspector' ? formDistrict : undefined,
+      division: formRole === 'super_admin' || formRole === 'national_mgmt' || formRole === 'viewer' ? undefined : formDivision,
       email: formEmail.trim(),
       phone: formPhone.trim(),
       status: formStatus,
@@ -465,8 +474,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                           <MapPin className="w-3.5 h-3.5 text-slate-400" />
                           <span>{user.province || 'National (All Pakistan)'}</span>
                         </div>
-                        {user.district && (
-                          <div className="text-[10px] text-slate-500 pl-4.5">{user.district} District</div>
+                        {user.division && user.division !== 'All Divisions' && (
+                          <div className="text-[10px] text-slate-500 pl-4.5 font-urdu">
+                            {user.division} ڈویژن / Division
+                          </div>
                         )}
                       </td>
 
@@ -663,33 +674,35 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Province Jurisdiction</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Province Jurisdiction / صوبائی دائرہ اختیار
+                  </label>
                   <select
                     value={formProvince}
                     onChange={(e) => {
                       const p = e.target.value;
                       setFormProvince(p);
-                      const pObj = PAKISTAN_PROVINCES.find((x) => x.name === p);
-                      if (pObj && pObj.divisions[0] && pObj.divisions[0].districts[0]) {
-                        setFormDistrict(pObj.divisions[0].districts[0].name);
-                      }
+                      setFormDivision('All Divisions');
                     }}
-                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg"
+                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
                   >
-                    {PAKISTAN_PROVINCES.map((p) => (
+                    {availableProvinces.map((p) => (
                       <option key={p.name} value={p.name}>{p.name} ({p.nameUrdu})</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned District</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Division Jurisdiction / متعلقہ ڈویژن
+                  </label>
                   <select
-                    value={formDistrict}
-                    onChange={(e) => setFormDistrict(e.target.value)}
-                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg"
+                    value={formDivision}
+                    onChange={(e) => setFormDivision(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
                   >
-                    {allDistrictsInFormProv.map((d) => (
+                    <option value="All Divisions">All Divisions (تمام ڈویژنز / Entire Province)</option>
+                    {divisionsInFormProv.map((d) => (
                       <option key={d.name} value={d.name}>{d.name} ({d.nameUrdu})</option>
                     ))}
                   </select>
@@ -973,33 +986,35 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Province Jurisdiction</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Province Jurisdiction / صوبائی دائرہ اختیار
+                  </label>
                   <select
                     value={formProvince}
                     onChange={(e) => {
                       const p = e.target.value;
                       setFormProvince(p);
-                      const pObj = PAKISTAN_PROVINCES.find((x) => x.name === p);
-                      if (pObj && pObj.divisions[0] && pObj.divisions[0].districts[0]) {
-                        setFormDistrict(pObj.divisions[0].districts[0].name);
-                      }
+                      setFormDivision('All Divisions');
                     }}
-                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg"
+                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
                   >
-                    {PAKISTAN_PROVINCES.map((p) => (
+                    {availableProvinces.map((p) => (
                       <option key={p.name} value={p.name}>{p.name} ({p.nameUrdu})</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned District</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Division Jurisdiction / متعلقہ ڈویژن
+                  </label>
                   <select
-                    value={formDistrict}
-                    onChange={(e) => setFormDistrict(e.target.value)}
-                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg"
+                    value={formDivision}
+                    onChange={(e) => setFormDivision(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
                   >
-                    {allDistrictsInFormProv.map((d) => (
+                    <option value="All Divisions">All Divisions (تمام ڈویژنز / Entire Province)</option>
+                    {divisionsInFormProv.map((d) => (
                       <option key={d.name} value={d.name}>{d.name} ({d.nameUrdu})</option>
                     ))}
                   </select>

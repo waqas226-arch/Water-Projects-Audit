@@ -42,6 +42,7 @@ export interface UserProfile {
   designation: string;
   country?: string; // Global country jurisdiction
   province?: string; // Geographical jurisdiction (e.g. 'Sindh' or undefined for national)
+  division?: string; // Division jurisdiction (e.g. 'Naseerabad', 'Mirpur Khas', or 'All Divisions')
   district?: string;
   email: string;
   phone: string;
