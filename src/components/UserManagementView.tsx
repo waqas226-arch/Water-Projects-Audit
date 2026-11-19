@@ -243,6 +243,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   // Confirm delete user
   const handleConfirmDelete = () => {
     if (!deletingUser) return;
+    if (currentUser.role !== 'super_admin') {
+      alert('Access Denied: Only HQ Super Admin has the authority to permanently delete User IDs.');
+      setDeletingUser(null);
+      return;
+    }
     onDeleteUser(deletingUser.id);
     setDeletingUser(null);
   };
@@ -438,7 +443,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
               ) : (
                 filteredUsers.map((user) => {
                   const isCurrent = currentUser.id === user.id;
-                  const isPrimaryAdmin = user.id === 'FGRF-HQ-01';
+                  const isPrimaryAdmin = user.id === 'FGRF-MIS-01' || user.id === '42101-1234567-1';
 
                   return (
                     <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">

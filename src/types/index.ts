@@ -77,6 +77,7 @@ export type RepairStatus = 'Pending' | 'In Progress' | 'Done';
 
 export interface RepairItem {
   id: string; // e.g., 'REP-WTS-2026-001'
+  auditId?: string;
   defectFound: string;
   repairRequired: string;
   responsiblePerson: string;

@@ -14,6 +14,8 @@ const STORAGE_KEYS = {
   GEO_HIERARCHY: 'fgrf_wts_geo_hierarchy_v2',
   DELETED_AUDITS: 'fgrf_wts_deleted_audit_ids_v3',
   DELETED_PROJECTS: 'fgrf_wts_deleted_project_ids_v3',
+  DELETED_USERS: 'fgrf_wts_deleted_user_ids_v3',
+  DELETED_REPAIRS: 'fgrf_wts_deleted_repair_ids_v3',
 };
 
 const memoryStorage: Record<string, string> = {};
@@ -48,16 +50,31 @@ export const SEED_REPAIRS: RepairItem[] = [];
 export const SEED_AUDITS: AuditRecord[] = [];
 export const SEED_NOTIFICATIONS: AppNotification[] = [];
 
-const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v6';
+const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v7';
+
+export const DEFAULT_BANNED_AUDIT_IDS: string[] = ['AUD-2026-0001', 'TEST-001'];
+export const DEFAULT_BANNED_PROJECT_IDS: string[] = ['FGRF-WTS-SND-004'];
+export const DEFAULT_BANNED_REPAIR_IDS: string[] = ['REP-2026-0001'];
+export const DEFAULT_BANNED_USER_IDS: string[] = [
+  'FGRF-HQ-01',
+  'FGRF-NAT-02',
+  'FGRF-SND-01',
+  'FGRF-PUN-01',
+  'FGRF-INS-101',
+  'FGRF-INS-102',
+  'FGRF-REP-01',
+  'FGRF-AUD-01',
+];
 
 export function ensureDemoDataCleared(): void {
   try {
-    // 1. Permanently ban legacy demo and fake IDs
-    markAuditAsDeleted('AUD-2026-0001');
-    markAuditAsDeleted('TEST-001');
-    markProjectAsDeleted('FGRF-WTS-SND-004');
+    // 1. Permanently ban legacy demo and fake IDs across all modules
+    DEFAULT_BANNED_AUDIT_IDS.forEach((id) => markAuditAsDeleted(id));
+    DEFAULT_BANNED_PROJECT_IDS.forEach((id) => markProjectAsDeleted(id));
+    DEFAULT_BANNED_REPAIR_IDS.forEach((id) => markRepairAsDeleted(id));
+    DEFAULT_BANNED_USER_IDS.forEach((id) => markUserAsDeleted(id));
 
-    // 2. Remove fake project and audit from localStorage immediately if present
+    // 2. Remove fake project from localStorage immediately if present
     const rawProjects = safeStorage.getItem(STORAGE_KEYS.PROJECTS);
     if (rawProjects) {
       try {
@@ -77,6 +94,7 @@ export function ensureDemoDataCleared(): void {
       safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify([]));
     }
 
+    // 3. Remove fake audits from localStorage immediately if present
     const rawAudits = safeStorage.getItem(STORAGE_KEYS.AUDITS);
     if (rawAudits) {
       try {
@@ -97,6 +115,7 @@ export function ensureDemoDataCleared(): void {
       safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify([]));
     }
 
+    // 4. Remove fake repairs from localStorage immediately if present
     const rawRepairs = safeStorage.getItem(STORAGE_KEYS.REPAIRS);
     if (rawRepairs) {
       try {
@@ -112,6 +131,26 @@ export function ensureDemoDataCleared(): void {
       safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify([]));
     }
 
+    // 5. Purge banned demo users from localStorage immediately
+    const rawUsers = safeStorage.getItem(STORAGE_KEYS.USERS);
+    if (rawUsers) {
+      try {
+        const parsedUsers = JSON.parse(rawUsers);
+        if (Array.isArray(parsedUsers)) {
+          const deletedIds = getDeletedUserIds();
+          const cleanUsers = parsedUsers.filter(
+            (u) => u && u.id && !deletedIds.includes(String(u.id).trim().toUpperCase())
+          );
+          if (!cleanUsers.some((u) => u.id.toUpperCase() === 'FGRF-MIS-01')) {
+            cleanUsers.unshift(PRECONFIGURED_USERS[0]);
+          }
+          safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(cleanUsers));
+        }
+      } catch {}
+    } else {
+      safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(PRECONFIGURED_USERS));
+    }
+
     safeStorage.setItem(STORAGE_CLEARED_FLAG, 'true');
   } catch (e) {
     console.error('Error clearing demo data:', e);
@@ -122,18 +161,20 @@ export function ensureDemoDataCleared(): void {
 ensureDemoDataCleared();
 
 // -------------------------------------------------------------
-// DELETED RECORDS REGISTRY (Prevents Resurrection on Log Out/In)
+// DELETED RECORDS REGISTRY (Prevents Resurrection on Log Out/In & Cloud Sync)
 // -------------------------------------------------------------
 
 export function getDeletedAuditIds(): string[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_AUDITS);
     const list: string[] = raw ? JSON.parse(raw) : [];
-    if (!list.includes('AUD-2026-0001')) list.push('AUD-2026-0001');
-    if (!list.includes('TEST-001')) list.push('TEST-001');
-    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : ['AUD-2026-0001', 'TEST-001'];
+    DEFAULT_BANNED_AUDIT_IDS.forEach((id) => {
+      const clean = id.toUpperCase();
+      if (!list.includes(clean)) list.push(clean);
+    });
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : DEFAULT_BANNED_AUDIT_IDS;
   } catch {
-    return ['AUD-2026-0001', 'TEST-001'];
+    return DEFAULT_BANNED_AUDIT_IDS;
   }
 }
 
@@ -150,10 +191,13 @@ export function getDeletedProjectIds(): string[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_PROJECTS);
     const list: string[] = raw ? JSON.parse(raw) : [];
-    if (!list.includes('FGRF-WTS-SND-004')) list.push('FGRF-WTS-SND-004');
-    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : ['FGRF-WTS-SND-004'];
+    DEFAULT_BANNED_PROJECT_IDS.forEach((id) => {
+      const clean = id.toUpperCase();
+      if (!list.includes(clean)) list.push(clean);
+    });
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : DEFAULT_BANNED_PROJECT_IDS;
   } catch {
-    return ['FGRF-WTS-SND-004'];
+    return DEFAULT_BANNED_PROJECT_IDS;
   }
 }
 
@@ -163,6 +207,52 @@ export function markProjectAsDeleted(projectId: string): void {
   if (!current.includes(cleanId)) {
     current.push(cleanId);
     safeStorage.setItem(STORAGE_KEYS.DELETED_PROJECTS, JSON.stringify(current));
+  }
+}
+
+export function getDeletedUserIds(): string[] {
+  try {
+    const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_USERS);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    DEFAULT_BANNED_USER_IDS.forEach((id) => {
+      const clean = id.toUpperCase();
+      if (!list.includes(clean)) list.push(clean);
+    });
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : DEFAULT_BANNED_USER_IDS;
+  } catch {
+    return DEFAULT_BANNED_USER_IDS;
+  }
+}
+
+export function markUserAsDeleted(userId: string): void {
+  const current = getDeletedUserIds();
+  const cleanId = String(userId).trim().toUpperCase();
+  if (!current.includes(cleanId)) {
+    current.push(cleanId);
+    safeStorage.setItem(STORAGE_KEYS.DELETED_USERS, JSON.stringify(current));
+  }
+}
+
+export function getDeletedRepairIds(): string[] {
+  try {
+    const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_REPAIRS);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    DEFAULT_BANNED_REPAIR_IDS.forEach((id) => {
+      const clean = id.toUpperCase();
+      if (!list.includes(clean)) list.push(clean);
+    });
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : DEFAULT_BANNED_REPAIR_IDS;
+  } catch {
+    return DEFAULT_BANNED_REPAIR_IDS;
+  }
+}
+
+export function markRepairAsDeleted(repairId: string): void {
+  const current = getDeletedRepairIds();
+  const cleanId = String(repairId).trim().toUpperCase();
+  if (!current.includes(cleanId)) {
+    current.push(cleanId);
+    safeStorage.setItem(STORAGE_KEYS.DELETED_REPAIRS, JSON.stringify(current));
   }
 }
 
@@ -257,11 +347,21 @@ export function saveAudits(audits: AuditRecord[]): void {
 export function getRepairs(): RepairItem[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.REPAIRS);
+    const deletedRepairs = getDeletedRepairIds();
+    const deletedAudits = getDeletedAuditIds();
     if (!raw) {
       safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify(SEED_REPAIRS));
       return SEED_REPAIRS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return SEED_REPAIRS;
+    return parsed.filter(
+      (r) =>
+        r &&
+        r.id &&
+        !deletedRepairs.includes(String(r.id).trim().toUpperCase()) &&
+        (!r.auditId || !deletedAudits.includes(String(r.auditId).trim().toUpperCase()))
+    );
   } catch {
     return SEED_REPAIRS;
   }
@@ -274,11 +374,20 @@ export function saveRepairs(repairs: RepairItem[]): void {
 export function getUsers(): UserProfile[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.USERS);
+    const deletedIds = getDeletedUserIds();
     if (!raw) {
       safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(PRECONFIGURED_USERS));
       return PRECONFIGURED_USERS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return PRECONFIGURED_USERS;
+    const clean = parsed.filter(
+      (u) => u && u.id && !deletedIds.includes(String(u.id).trim().toUpperCase())
+    );
+    if (!clean.some((u) => u.id.toUpperCase() === 'FGRF-MIS-01')) {
+      clean.unshift(PRECONFIGURED_USERS[0]);
+    }
+    return clean;
   } catch {
     return PRECONFIGURED_USERS;
   }
@@ -317,16 +426,41 @@ export function updateUser(updatedUser: UserProfile): UserProfile[] {
   return users;
 }
 
-export function deleteUser(userId: string): { success: boolean; error?: string; users: UserProfile[] } {
-  if (userId === 'FGRF-HQ-01' || userId === '42101-1234567-1') {
-    return { success: false, error: 'Cannot delete the primary Super Administrator account.', users: getUsers() };
+export function deleteUser(
+  userId: string,
+  actorRole?: string
+): { success: boolean; error?: string; users: UserProfile[] } {
+  // Strict Super Admin Check: Deletion rights are exclusively granted to HQ Super Admin
+  if (actorRole && actorRole !== 'super_admin') {
+    return {
+      success: false,
+      error: 'Access Denied: Only HQ Super Admin has the authority to permanently delete User IDs.',
+      users: getUsers(),
+    };
   }
+
+  const cleanId = String(userId).trim().toUpperCase();
+  if (cleanId === 'FGRF-MIS-01' || cleanId === '42101-1234567-1') {
+    return {
+      success: false,
+      error: 'Cannot delete the primary Super Administrator account (Syed Waqas).',
+      users: getUsers(),
+    };
+  }
+
+  // 1. Mark in permanent tombstone registry so sync can NEVER resurrect this ID
+  markUserAsDeleted(cleanId);
+
+  // 2. Remove locally
   const users = getUsers();
-  const filtered = users.filter((u) => u.id !== userId);
+  const filtered = users.filter((u) => u.id.trim().toUpperCase() !== cleanId);
   saveUsers(filtered);
+
+  // 3. Immediately publish deletion & tombstone to Cloud Master DB
   import('./cloudSync.ts').then((cs) => {
-    cs.publishUsersToCloud(filtered, userId).catch(() => {});
+    cs.publishUsersToCloud(filtered, 'FGRF-MIS-01').catch(() => {});
   }).catch(() => {});
+
   return { success: true, users: filtered };
 }
 
@@ -392,12 +526,18 @@ export function cascadeLocationChangeToUsers(
 export function getCurrentUser(): UserProfile {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    const deletedUserIds = getDeletedUserIds();
     if (!raw) {
       // Default to Super Administrator – Head Office
       safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(PRECONFIGURED_USERS[0]));
       return PRECONFIGURED_USERS[0];
     }
-    return JSON.parse(raw);
+    const parsed: UserProfile = JSON.parse(raw);
+    if (!parsed || !parsed.id || deletedUserIds.includes(parsed.id.toUpperCase())) {
+      safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(PRECONFIGURED_USERS[0]));
+      return PRECONFIGURED_USERS[0];
+    }
+    return parsed;
   } catch {
     return PRECONFIGURED_USERS[0];
   }
@@ -431,9 +571,10 @@ export function resetToSeedData(): void {
   safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(PRECONFIGURED_USERS));
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(PRECONFIGURED_USERS[0]));
   safeStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
-  markAuditAsDeleted('AUD-2026-0001');
-  markAuditAsDeleted('TEST-001');
-  markProjectAsDeleted('FGRF-WTS-SND-004');
+  DEFAULT_BANNED_AUDIT_IDS.forEach((id) => markAuditAsDeleted(id));
+  DEFAULT_BANNED_PROJECT_IDS.forEach((id) => markProjectAsDeleted(id));
+  DEFAULT_BANNED_REPAIR_IDS.forEach((id) => markRepairAsDeleted(id));
+  DEFAULT_BANNED_USER_IDS.forEach((id) => markUserAsDeleted(id));
 }
 
 export function submitNewAudit(audit: AuditRecord): { audit: AuditRecord; updatedProject: WaterProject } {
@@ -546,7 +687,12 @@ export function updateProject(updatedProject: WaterProject): WaterProject[] {
   return projects;
 }
 
-export function deleteProject(projectId: string): WaterProject[] {
+export function deleteProject(projectId: string, actorRole?: string): WaterProject[] {
+  // Strict Super Admin Check
+  if (actorRole && actorRole !== 'super_admin') {
+    throw new Error('Access Denied: Only HQ Super Admin has the authority to permanently delete Projects.');
+  }
+
   const cleanId = String(projectId).trim().toUpperCase();
   markProjectAsDeleted(cleanId);
 
@@ -554,9 +700,9 @@ export function deleteProject(projectId: string): WaterProject[] {
   const filtered = projects.filter((p) => p.id.trim().toUpperCase() !== cleanId);
   saveProjects(filtered);
 
-  // Automatically publish to Real-Time Central Cloud Database
-  import('./cloudSync.ts').then(cs => {
-    cs.pushLocalToCloud(getAudits(), filtered, getRepairs());
+  // Automatically publish deletion & tombstones to Real-Time Central Cloud Database
+  import('./cloudSync.ts').then((cs) => {
+    cs.pushLocalToCloud(getAudits(), filtered, getRepairs(), 'FGRF-MIS-01');
   }).catch(() => {});
   return filtered;
 }
@@ -609,19 +755,26 @@ export function updateAudit(updatedAudit: AuditRecord): AuditRecord[] {
 
   // Automatically broadcast update to Real-Time Central Cloud Database
   import('./cloudSync.ts').then(cs => {
-    cs.pushLocalToCloud(audits, getProjects(), getRepairs());
+    cs.pushLocalToCloud(audits, getProjects(), getRepairs(), 'FGRF-MIS-01');
   }).catch(() => {});
 
   return audits;
 }
 
-export function deleteAudit(auditId: string): AuditRecord[] {
+export function deleteAudit(auditId: string, actorRole?: string): AuditRecord[] {
+  // Strict Super Admin Check
+  if (actorRole && actorRole !== 'super_admin') {
+    throw new Error('Access Denied: Only HQ Super Admin has the authority to permanently delete Audit Records.');
+  }
+
   const cleanId = String(auditId).trim().toUpperCase();
   markAuditAsDeleted(cleanId);
 
   const audits = getAudits();
   const auditToDelete = audits.find((a) => String(a.id).trim().toUpperCase() === cleanId);
   const auditRepairIds = (auditToDelete?.repairs || []).map((r) => r.id);
+  // Mark all associated repairs as deleted tombstones
+  auditRepairIds.forEach((rid) => markRepairAsDeleted(rid));
 
   const filteredAudits = audits.filter((a) => String(a.id).trim().toUpperCase() !== cleanId);
   saveAudits(filteredAudits);
@@ -648,7 +801,7 @@ export function deleteAudit(auditId: string): AuditRecord[] {
 
   // Automatically broadcast deletion to Real-Time Central Cloud Database
   import('./cloudSync.ts').then(cs => {
-    cs.pushLocalToCloud(filteredAudits, getProjects(), filteredRepairs);
+    cs.pushLocalToCloud(filteredAudits, getProjects(), filteredRepairs, 'FGRF-MIS-01');
   }).catch(() => {});
 
   return filteredAudits;

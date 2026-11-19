@@ -97,8 +97,18 @@ test('evaluateOverallConditionFromCheckpoints determines correct project status'
 });
 
 test('filterRecordsByJurisdiction restricts provincial coordinators', () => {
-  const sindhCoord = PRECONFIGURED_USERS.find((u) => u.id === 'FGRF-SND-01')!;
-  const superAdmin = PRECONFIGURED_USERS.find((u) => u.id === 'FGRF-HQ-01')!;
+  const sindhCoord: UserProfile = {
+    id: 'FGRF-SND-TEST',
+    name: 'Sindh Test Coordinator',
+    role: 'provincial_coord',
+    designation: 'Sindh Provincial Coordinator',
+    province: 'Sindh',
+    email: 'coord.sindh@fgrf.org',
+    phone: '+92 333 4567890',
+    status: 'active',
+    rights: getDefaultRightsForRole('provincial_coord'),
+  };
+  const superAdmin = PRECONFIGURED_USERS.find((u) => u.id === 'FGRF-MIS-01')!;
 
   const sampleItems = [
     { id: '1', province: 'Sindh' },
@@ -212,9 +222,9 @@ test('calculateKPIs tallies condition counts and overdue repairs accurately', ()
 
 test('validateUserId enforces format and checks duplicates', () => {
   assert.equal(validateUserId('', PRECONFIGURED_USERS).isValid, false);
-  assert.equal(validateUserId('123', PRECONFIGURED_USERS).isValid, false);
-  assert.equal(validateUserId('FGRF-HQ-01', PRECONFIGURED_USERS).isValid, false); // duplicate
-  assert.equal(validateUserId('FGRF-HQ-01', PRECONFIGURED_USERS, 'FGRF-HQ-01').isValid, true); // editing self
+  assert.equal(validateUserId('12', PRECONFIGURED_USERS).isValid, false);
+  assert.equal(validateUserId('FGRF-MIS-01', PRECONFIGURED_USERS).isValid, false); // duplicate
+  assert.equal(validateUserId('FGRF-MIS-01', PRECONFIGURED_USERS, 'FGRF-MIS-01').isValid, true); // editing self
   assert.equal(validateUserId('FGRF-INS-999', PRECONFIGURED_USERS).isValid, true); // new valid ID
 });
 

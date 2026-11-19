@@ -48,47 +48,103 @@ app.get('/api/cloud-sync', (req, res) => {
 app.post('/api/cloud-sync', (req, res) => {
   const incoming = req.body || {};
   const current = readMasterDb();
-  const mergedAudits = [...(current.audits || [])];
-  for (const a of (incoming.audits || [])) {
-    const idx = mergedAudits.findIndex((x: any) => x && x.id === a.id);
-    if (idx >= 0) mergedAudits[idx] = a;
-    else mergedAudits.unshift(a);
-  }
-  const mergedProjects = [...(current.projects || [])];
-  for (const p of (incoming.projects || [])) {
-    const idx = mergedProjects.findIndex((x: any) => x && x.id === p.id);
-    if (idx >= 0) mergedProjects[idx] = p;
-    else mergedProjects.unshift(p);
-  }
-  const mergedRepairs = [...(current.repairs || [])];
-  for (const r of (incoming.repairs || [])) {
-    const idx = mergedRepairs.findIndex((x: any) => x && x.id === r.id);
-    if (idx >= 0) mergedRepairs[idx] = r;
-    else mergedRepairs.unshift(r);
-  }
-  const mergedUsers = [...(current.users || [])];
-  for (const u of (incoming.users || [])) {
-    if (u && u.id) {
-      const idx = mergedUsers.findIndex((x: any) => x && String(x.id).toUpperCase() === String(u.id).toUpperCase());
-      if (idx >= 0) mergedUsers[idx] = { ...mergedUsers[idx], ...u };
-      else mergedUsers.push(u);
+
+  // Merge tombstones across current and incoming
+  const deletedAudits = Array.from(new Set([
+    ...(current.deletedAuditIds || []), 
+    ...(incoming.deletedAuditIds || []),
+    'AUD-2026-0001', 'TEST-001'
+  ].map((id: string) => String(id).trim().toUpperCase())));
+
+  const deletedProjects = Array.from(new Set([
+    ...(current.deletedProjectIds || []), 
+    ...(incoming.deletedProjectIds || []),
+    'FGRF-WTS-SND-004'
+  ].map((id: string) => String(id).trim().toUpperCase())));
+
+  const deletedUsers = Array.from(new Set([
+    ...(current.deletedUserIds || []), 
+    ...(incoming.deletedUserIds || []),
+    'FGRF-HQ-01', 'FGRF-NAT-02', 'FGRF-SND-01', 'FGRF-PUN-01', 'FGRF-INS-101', 'FGRF-INS-102', 'FGRF-REP-01', 'FGRF-AUD-01'
+  ].map((id: string) => String(id).trim().toUpperCase())));
+
+  const deletedRepairs = Array.from(new Set([
+    ...(current.deletedRepairIds || []), 
+    ...(incoming.deletedRepairIds || []),
+    'REP-2026-0001'
+  ].map((id: string) => String(id).trim().toUpperCase())));
+
+  // Merge Audits (strictly exclude deleted)
+  const auditsMap = new Map<string, any>();
+  for (const a of (current.audits || [])) {
+    if (a && a.id && !deletedAudits.includes(String(a.id).trim().toUpperCase())) {
+      auditsMap.set(a.id, a);
     }
   }
+  for (const a of (incoming.audits || [])) {
+    if (a && a.id && !deletedAudits.includes(String(a.id).trim().toUpperCase())) {
+      auditsMap.set(a.id, a);
+    }
+  }
+
+  // Merge Projects (strictly exclude deleted)
+  const projectsMap = new Map<string, any>();
+  for (const p of (current.projects || [])) {
+    if (p && p.id && !deletedProjects.includes(String(p.id).trim().toUpperCase())) {
+      projectsMap.set(p.id, p);
+    }
+  }
+  for (const p of (incoming.projects || [])) {
+    if (p && p.id && !deletedProjects.includes(String(p.id).trim().toUpperCase())) {
+      projectsMap.set(p.id, p);
+    }
+  }
+
+  // Merge Repairs (strictly exclude deleted)
+  const repairsMap = new Map<string, any>();
+  for (const r of (current.repairs || [])) {
+    if (r && r.id && !deletedRepairs.includes(String(r.id).trim().toUpperCase()) && (!r.auditId || !deletedAudits.includes(String(r.auditId).trim().toUpperCase()))) {
+      repairsMap.set(r.id, r);
+    }
+  }
+  for (const r of (incoming.repairs || [])) {
+    if (r && r.id && !deletedRepairs.includes(String(r.id).trim().toUpperCase()) && (!r.auditId || !deletedAudits.includes(String(r.auditId).trim().toUpperCase()))) {
+      repairsMap.set(r.id, r);
+    }
+  }
+
+  // Merge Users (strictly exclude deleted)
+  const usersMap = new Map<string, any>();
+  for (const u of (current.users || [])) {
+    if (u && u.id && !deletedUsers.includes(String(u.id).trim().toUpperCase())) {
+      usersMap.set(String(u.id).toUpperCase(), u);
+    }
+  }
+  for (const u of (incoming.users || [])) {
+    if (u && u.id && !deletedUsers.includes(String(u.id).trim().toUpperCase())) {
+      usersMap.set(String(u.id).toUpperCase(), { ...(usersMap.get(String(u.id).toUpperCase()) || {}), ...u });
+    }
+  }
+
   const updated = {
     system: "Faizan Global Relief Foundation (FGRF) - Water Projects Audit & Monitoring System",
     formReference: "FGRF-WTS-AUD-002.00-26",
     architect: "Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF)",
-    audits: mergedAudits,
-    projects: mergedProjects,
-    repairs: mergedRepairs,
+    audits: Array.from(auditsMap.values()),
+    projects: Array.from(projectsMap.values()),
+    repairs: Array.from(repairsMap.values()),
     geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || undefined,
     masterHeads: incoming.masterHeads || current.masterHeads || undefined,
-    users: mergedUsers,
+    users: Array.from(usersMap.values()),
+    deletedAuditIds: deletedAudits,
+    deletedProjectIds: deletedProjects,
+    deletedUserIds: deletedUsers,
+    deletedRepairIds: deletedRepairs,
     lastUpdated: new Date().toISOString(),
-    updatedBy: incoming.updatedBy || 'FGRF-HQ'
+    updatedBy: incoming.updatedBy || 'Syed Waqas (FGRF-MIS-01)'
   };
   writeMasterDb(updated);
-  res.json({ success: true, count: mergedAudits.length, lastUpdated: updated.lastUpdated });
+  res.json({ success: true, count: updated.audits.length, lastUpdated: updated.lastUpdated });
 });
 
 // Gemini High-Thinking Water Audit Quality Advisor

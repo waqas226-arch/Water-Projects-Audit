@@ -388,15 +388,17 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
                           <Edit className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Delete Audit Button */}
-                        <button
-                          type="button"
-                          onClick={() => setDeletingAudit(audit)}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
-                          title="Permanently Delete Audit Record / معائنہ فارم ریکارڈ حذف کریں"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Delete Audit Button - STRICTLY SUPER ADMIN ONLY */}
+                        {currentUser.role === 'super_admin' && (
+                          <button
+                            type="button"
+                            onClick={() => setDeletingAudit(audit)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
+                            title="Permanently Delete Audit Record (Super Admin Only) / معائنہ فارم ریکارڈ حذف کریں"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -551,6 +553,11 @@ export const InspectionRecordsView: React.FC<InspectionRecordsViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  if (currentUser.role !== 'super_admin') {
+                    alert('Access Denied: Only HQ Super Admin has the authority to permanently delete Audit Records.');
+                    setDeletingAudit(null);
+                    return;
+                  }
                   if (onDeleteAudit && deletingAudit) {
                     onDeleteAudit(deletingAudit.id);
                   }

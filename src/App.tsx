@@ -215,14 +215,18 @@ export default function App() {
   };
 
   const handleDeleteUser = (userId: string) => {
-    const res = deleteUser(userId);
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has the authority to permanently delete User IDs.');
+      return;
+    }
+    const res = deleteUser(userId, currentUser.role);
     if (!res.success && res.error) {
       showToast(res.error);
       return;
     }
     setUsers(res.users || getUsers());
     publishUsersToCloud(res.users || getUsers(), currentUser.id).catch(() => {});
-    showToast(`User ID ${userId} deleted and removed from Cloud Master DB.`);
+    showToast(`User ID ${userId} deleted permanently and removed from Cloud Master DB.`);
   };
 
   // Submit Audit Form
@@ -326,10 +330,14 @@ export default function App() {
   };
 
   const handleDeleteProject = (projectId: string) => {
-    const updatedList = deleteProject(projectId);
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has the authority to permanently delete Water Projects.');
+      return;
+    }
+    const updatedList = deleteProject(projectId, currentUser.role);
     setProjects(updatedList);
     pushLocalToCloud(audits, updatedList, repairs, currentUser.id, geoHierarchy, undefined, users).catch(() => {});
-    showToast(`Project ${projectId} removed from Master Database.`);
+    showToast(`Project ${projectId} removed permanently from Master Database.`);
   };
 
   // Edit & Delete Audit Records (Master Database)
@@ -342,11 +350,15 @@ export default function App() {
   };
 
   const handleDeleteAudit = (auditId: string) => {
-    const updatedList = deleteAudit(auditId);
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has the authority to permanently delete Audit Records.');
+      return;
+    }
+    const updatedList = deleteAudit(auditId, currentUser.role);
     setAudits(updatedList);
     setRepairs(getRepairs());
     pushLocalToCloud(updatedList, getProjects(), getRepairs(), currentUser.id, geoHierarchy, undefined, users).catch(() => {});
-    showToast(`Audit Record ${auditId} permanently deleted.`);
+    showToast(`Audit Record ${auditId} permanently deleted and removed from Cloud Master DB.`);
   };
 
   // Start audit for a specific project

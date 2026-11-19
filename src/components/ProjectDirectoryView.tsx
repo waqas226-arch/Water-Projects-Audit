@@ -105,6 +105,10 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
   };
 
   const handleDeleteProject = (proj: WaterProject) => {
+    if (currentUser.role !== 'super_admin') {
+      alert('Access Denied: Only HQ Super Admin has the authority to permanently delete water projects.');
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete project ${proj.id} (${proj.name}) from Pakistan Water Projects Master Database? This action cannot be reversed.`)) {
       if (onDeleteProject) {
         onDeleteProject(proj.id);
@@ -528,14 +532,17 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProject(proj)}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors"
-                          title="Delete Project Record / پراجیکٹ ڈیٹا بیس سے حذف کریں"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Delete Project Button - STRICTLY SUPER ADMIN ONLY */}
+                        {currentUser.role === 'super_admin' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProject(proj)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Project Record (Super Admin Only) / پراجیکٹ ڈیٹا بیس سے حذف کریں"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

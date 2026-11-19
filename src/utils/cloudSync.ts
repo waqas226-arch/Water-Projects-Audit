@@ -20,6 +20,12 @@ import {
   saveRepairs, 
   getDeletedAuditIds, 
   getDeletedProjectIds,
+  getDeletedUserIds,
+  getDeletedRepairIds,
+  markAuditAsDeleted,
+  markProjectAsDeleted,
+  markUserAsDeleted,
+  markRepairAsDeleted,
   getGeoHierarchy,
   saveGeoHierarchy,
   getMasterHeads,
@@ -118,6 +124,22 @@ function doPost(e) {
       }
     });
 
+    // Merge Tombstones (Deleted Records Registry)
+    var delAuditsMap = {};
+    (current.deletedAuditIds || []).concat(incoming.deletedAuditIds || []).forEach(function(id) { if (id) delAuditsMap[String(id).toUpperCase()] = true; });
+    var delProjectsMap = {};
+    (current.deletedProjectIds || []).concat(incoming.deletedProjectIds || []).forEach(function(id) { if (id) delProjectsMap[String(id).toUpperCase()] = true; });
+    var delUsersMap = {};
+    (current.deletedUserIds || []).concat(incoming.deletedUserIds || []).forEach(function(id) { if (id) delUsersMap[String(id).toUpperCase()] = true; });
+    var delRepairsMap = {};
+    (current.deletedRepairIds || []).concat(incoming.deletedRepairIds || []).forEach(function(id) { if (id) delRepairsMap[String(id).toUpperCase()] = true; });
+
+    // Strictly purge any deleted records so they NEVER resurrect
+    Object.keys(auditsMap).forEach(function(id) { if (delAuditsMap[String(id).toUpperCase()]) delete auditsMap[id]; });
+    Object.keys(projectsMap).forEach(function(id) { if (delProjectsMap[String(id).toUpperCase()]) delete projectsMap[id]; });
+    Object.keys(usersMap).forEach(function(id) { if (delUsersMap[String(id).toUpperCase()]) delete usersMap[id]; });
+    Object.keys(repairsMap).forEach(function(id) { if (delRepairsMap[String(id).toUpperCase()]) delete repairsMap[id]; });
+
     var merged = {
       audits: Object.keys(auditsMap).map(function(k) { return auditsMap[k]; }),
       projects: Object.keys(projectsMap).map(function(k) { return projectsMap[k]; }),
@@ -125,8 +147,12 @@ function doPost(e) {
       geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || [],
       masterHeads: incoming.masterHeads || current.masterHeads || null,
       users: Object.keys(usersMap).map(function(k) { return usersMap[k]; }),
+      deletedAuditIds: Object.keys(delAuditsMap),
+      deletedProjectIds: Object.keys(delProjectsMap),
+      deletedUserIds: Object.keys(delUsersMap),
+      deletedRepairIds: Object.keys(delRepairsMap),
       lastUpdated: new Date().toISOString(),
-      updatedBy: incoming.updatedBy || "Field Staff"
+      updatedBy: incoming.updatedBy || "Syed Waqas (FGRF-MIS-01)"
     };
 
     prop.setProperty("FGRF_MASTER_DB", JSON.stringify(merged));
@@ -161,6 +187,10 @@ export interface CloudDatabasePayload {
   geoHierarchy?: CountryInfo[];
   masterHeads?: MasterHeadsConfig;
   users?: UserProfile[];
+  deletedAuditIds?: string[];
+  deletedProjectIds?: string[];
+  deletedUserIds?: string[];
+  deletedRepairIds?: string[];
   lastUpdated: string;
   updatedBy?: string;
 }
@@ -202,7 +232,7 @@ export function sanitizeAuditRecord(raw: any): AuditRecord | null {
     installationType: raw.installationType || 'Hand Pump',
     installationDate: raw.installationDate || '',
     inspectionDateTime: raw.inspectionDateTime || new Date().toISOString(),
-    inspectorId: raw.inspectorId || 'FGRF-INS-101',
+    inspectorId: raw.inspectorId || 'FGRF-MIS-01',
     inspectorName: raw.inspectorName || 'Field Inspector',
     inspectorDesignation: raw.inspectorDesignation || 'Inspector',
     checkpoints: Array.isArray(raw.checkpoints) && raw.checkpoints.length > 0 ? raw.checkpoints : createDefaultCheckpoints(),
@@ -407,10 +437,14 @@ export async function pushLocalToCloud(
   audits: AuditRecord[] = getAudits(),
   projects: WaterProject[] = getProjects(),
   repairs: RepairItem[] = getRepairs(),
-  userId: string = 'FGRF-HQ-01',
+  userId: string = 'FGRF-MIS-01',
   geoHierarchy: CountryInfo[] = getGeoHierarchy(),
   masterHeads: MasterHeadsConfig = getMasterHeads(),
-  users: UserProfile[] = getUsers()
+  users: UserProfile[] = getUsers(),
+  deletedAuditIds: string[] = getDeletedAuditIds(),
+  deletedProjectIds: string[] = getDeletedProjectIds(),
+  deletedUserIds: string[] = getDeletedUserIds(),
+  deletedRepairIds: string[] = getDeletedRepairIds()
 ): Promise<boolean> {
   const endpoint = getCloudSyncEndpoint();
   const ghToken = getGitHubToken();
@@ -422,6 +456,10 @@ export async function pushLocalToCloud(
     geoHierarchy,
     masterHeads,
     users,
+    deletedAuditIds,
+    deletedProjectIds,
+    deletedUserIds,
+    deletedRepairIds,
     lastUpdated: new Date().toISOString(),
     updatedBy: userId
   };
@@ -488,8 +526,11 @@ export async function pushLocalToCloud(
 /**
  * Merge local and cloud audits & projects intelligently by ID & timestamp
  */
-export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merged: AuditRecord[]; newCount: number } {
-  const deletedIds = getDeletedAuditIds();
+export function mergeAudits(
+  local: AuditRecord[], 
+  remote: AuditRecord[], 
+  deletedIds: string[] = getDeletedAuditIds()
+): { merged: AuditRecord[]; newCount: number } {
   const map = new Map<string, AuditRecord>();
   local.forEach((a) => {
     const s = sanitizeAuditRecord(a);
@@ -503,7 +544,7 @@ export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merg
     const cleanRemote = sanitizeAuditRecord(remoteAudit);
     if (!cleanRemote) return;
 
-    // Never re-import an audit that was explicitly deleted locally
+    // Never re-import an audit that was explicitly deleted locally or remotely
     if (deletedIds.includes(cleanRemote.id.trim().toUpperCase())) return;
 
     if (!map.has(cleanRemote.id)) {
@@ -526,8 +567,11 @@ export function mergeAudits(local: AuditRecord[], remote: AuditRecord[]): { merg
   };
 }
 
-export function mergeProjects(local: WaterProject[], remote: WaterProject[]): { merged: WaterProject[]; newCount: number } {
-  const deletedIds = getDeletedProjectIds();
+export function mergeProjects(
+  local: WaterProject[], 
+  remote: WaterProject[], 
+  deletedIds: string[] = getDeletedProjectIds()
+): { merged: WaterProject[]; newCount: number } {
   const map = new Map<string, WaterProject>();
   local.forEach((p) => {
     if (p && p.id && !deletedIds.includes(p.id.trim().toUpperCase())) {
@@ -541,7 +585,7 @@ export function mergeProjects(local: WaterProject[], remote: WaterProject[]): { 
     const cleanId = String(remoteProj.id).trim().toUpperCase();
     if (cleanId === 'FGRF-WTS-SND-004' || String(remoteProj.name || '').includes('Haji Qasim Brohi')) return;
 
-    // Never re-import a project that was explicitly deleted locally
+    // Never re-import a project that was explicitly deleted
     if (deletedIds.includes(remoteProj.id.trim().toUpperCase())) return;
 
     if (!map.has(remoteProj.id)) {
@@ -564,27 +608,63 @@ export function mergeProjects(local: WaterProject[], remote: WaterProject[]): { 
   };
 }
 
-export function mergeRepairs(local: RepairItem[], remote: RepairItem[]): RepairItem[] {
+export function mergeRepairs(
+  local: RepairItem[], 
+  remote: RepairItem[],
+  deletedRepairIds: string[] = getDeletedRepairIds(),
+  deletedAuditIds: string[] = getDeletedAuditIds()
+): RepairItem[] {
   const map = new Map<string, RepairItem>();
-  local.forEach((r) => map.set(r.id, r));
-  remote.forEach((r) => map.set(r.id, r));
+  const bannedRepairSet = new Set(deletedRepairIds.map((id) => id.trim().toUpperCase()));
+  const bannedAuditSet = new Set(deletedAuditIds.map((id) => id.trim().toUpperCase()));
+
+  local.forEach((r) => {
+    if (!r || !r.id) return;
+    const cleanId = String(r.id).trim().toUpperCase();
+    if (bannedRepairSet.has(cleanId)) return;
+    if (r.auditId && bannedAuditSet.has(String(r.auditId).trim().toUpperCase())) return;
+    map.set(r.id, r);
+  });
+
+  remote.forEach((r) => {
+    if (!r || !r.id) return;
+    const cleanId = String(r.id).trim().toUpperCase();
+    if (bannedRepairSet.has(cleanId)) return;
+    if (r.auditId && bannedAuditSet.has(String(r.auditId).trim().toUpperCase())) return;
+
+    if (!map.has(r.id)) {
+      map.set(r.id, r);
+    } else {
+      const localRepair = map.get(r.id)!;
+      map.set(r.id, { ...localRepair, ...r });
+    }
+  });
+
   return Array.from(map.values());
 }
 
 /**
  * Merge local and cloud user ID profiles & access rights
+ * Strictly honors deleted user tombstones so deleted IDs NEVER recover
  */
-export function mergeUsers(local: UserProfile[], remote: UserProfile[]): { merged: UserProfile[]; newCount: number } {
+export function mergeUsers(
+  local: UserProfile[], 
+  remote: UserProfile[],
+  deletedUserIds: string[] = getDeletedUserIds()
+): { merged: UserProfile[]; newCount: number } {
   const map = new Map<string, UserProfile>();
+  const bannedSet = new Set(deletedUserIds.map((id) => id.trim().toUpperCase()));
 
-  // Always seed baseline staff accounts
+  // Always seed baseline Super Admin account (Syed Waqas) if not banned
   PRECONFIGURED_USERS.forEach((u) => {
-    if (u && u.id) map.set(u.id.toUpperCase(), u);
+    if (u && u.id && !bannedSet.has(u.id.toUpperCase())) {
+      map.set(u.id.toUpperCase(), u);
+    }
   });
 
   // Local registered users
   (local || []).forEach((u) => {
-    if (u && u.id) {
+    if (u && u.id && !bannedSet.has(u.id.toUpperCase())) {
       map.set(u.id.toUpperCase(), u);
     }
   });
@@ -594,12 +674,14 @@ export function mergeUsers(local: UserProfile[], remote: UserProfile[]): { merge
   (remote || []).forEach((r) => {
     if (!r || !r.id) return;
     const key = r.id.toUpperCase();
+    // NEVER re-import any user that was deleted
+    if (bannedSet.has(key)) return;
+
     if (!map.has(key)) {
       map.set(key, r);
       newCount++;
     } else {
       const existing = map.get(key)!;
-      // Preserve local updates or merge remote properties
       map.set(key, {
         ...existing,
         ...r,
@@ -617,7 +699,7 @@ export function mergeUsers(local: UserProfile[], remote: UserProfile[]): { merge
   };
 }
 
-export async function publishUsersToCloud(users: UserProfile[] = getUsers(), userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+export async function publishUsersToCloud(users: UserProfile[] = getUsers(), userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveUsers(users);
   const success = await pushLocalToCloud(
     getAudits(),
@@ -632,7 +714,7 @@ export async function publishUsersToCloud(users: UserProfile[] = getUsers(), use
   return success;
 }
 
-export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveGeoHierarchy(geo);
   const users = getUsers();
   const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, geo, getMasterHeads(), users);
@@ -641,7 +723,7 @@ export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: str
   return success;
 }
 
-export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveMasterHeads(heads);
   const users = getUsers();
   const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, getGeoHierarchy(), heads, users);
@@ -652,10 +734,10 @@ export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId
 /**
  * Full two-way synchronization:
  * 1. Downloads remote cloud data
- * 2. Merges with local data
- * 3. Uploads merged superset back to cloud so both sides are unified
+ * 2. Merges with local data & absorbs tombstones
+ * 3. Uploads merged superset with tombstones back to cloud so deleted records NEVER recover
  */
-export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<SyncResult> {
+export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<SyncResult> {
   const localAudits = getAudits();
   const localProjects = getProjects();
   const localRepairs = getRepairs();
@@ -669,11 +751,30 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const remoteRepairs = cloud?.repairs || [];
   const remoteUsers = cloud?.users || [];
 
-  // Merge records
-  const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, remoteAudits);
-  const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects);
-  const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs);
-  const { merged: mergedUsers, newCount: newUsersCount } = mergeUsers(localUsers, remoteUsers);
+  // 1. Absorb remote tombstones into local tombstone registries
+  if (Array.isArray(cloud?.deletedAuditIds)) {
+    cloud.deletedAuditIds.forEach((id) => markAuditAsDeleted(id));
+  }
+  if (Array.isArray(cloud?.deletedProjectIds)) {
+    cloud.deletedProjectIds.forEach((id) => markProjectAsDeleted(id));
+  }
+  if (Array.isArray(cloud?.deletedUserIds)) {
+    cloud.deletedUserIds.forEach((id) => markUserAsDeleted(id));
+  }
+  if (Array.isArray(cloud?.deletedRepairIds)) {
+    cloud.deletedRepairIds.forEach((id) => markRepairAsDeleted(id));
+  }
+
+  const allDeletedAuditIds = getDeletedAuditIds();
+  const allDeletedProjectIds = getDeletedProjectIds();
+  const allDeletedUserIds = getDeletedUserIds();
+  const allDeletedRepairIds = getDeletedRepairIds();
+
+  // 2. Merge records, strictly honoring all tombstones
+  const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, remoteAudits, allDeletedAuditIds);
+  const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects, allDeletedProjectIds);
+  const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs, allDeletedRepairIds, allDeletedAuditIds);
+  const { merged: mergedUsers, newCount: newUsersCount } = mergeUsers(localUsers, remoteUsers, allDeletedUserIds);
 
   // Synchronize Geo Hierarchy from authoritative Cloud Master DB
   let geoUpdated = false;
@@ -718,8 +819,20 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   saveRepairs(mergedRepairs);
   saveUsers(mergedUsers);
 
-  // Push merged superset back to cloud so other users worldwide get real-time updates
-  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), mergedHeads, mergedUsers);
+  // Push merged superset back to cloud so other users worldwide get real-time updates and deletions
+  await pushLocalToCloud(
+    mergedAudits, 
+    mergedProjects, 
+    mergedRepairs, 
+    userId, 
+    getGeoHierarchy(), 
+    mergedHeads, 
+    mergedUsers,
+    allDeletedAuditIds,
+    allDeletedProjectIds,
+    allDeletedUserIds,
+    allDeletedRepairIds
+  );
 
   try {
     localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
@@ -750,16 +863,20 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
 /**
  * Immediately publish a newly submitted inspection from field staff to cloud
  */
-export async function publishAuditToCloud(audit: AuditRecord, project: WaterProject, repairs: RepairItem[], userId: string): Promise<boolean> {
+export async function publishAuditToCloud(audit: AuditRecord, project: WaterProject, repairs: RepairItem[], userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   try {
     const cloud = await fetchCloudData();
     const currentAudits = cloud?.audits || getAudits();
     const currentProjects = cloud?.projects || getProjects();
     const currentRepairs = cloud?.repairs || getRepairs();
 
-    const { merged: mergedAudits } = mergeAudits(currentAudits, [audit]);
-    const { merged: mergedProjects } = mergeProjects(currentProjects, [project]);
-    const mergedRepairs = mergeRepairs(currentRepairs, repairs);
+    const allDeletedAuditIds = getDeletedAuditIds();
+    const allDeletedProjectIds = getDeletedProjectIds();
+    const allDeletedRepairIds = getDeletedRepairIds();
+
+    const { merged: mergedAudits } = mergeAudits(currentAudits, [audit], allDeletedAuditIds);
+    const { merged: mergedProjects } = mergeProjects(currentProjects, [project], allDeletedProjectIds);
+    const mergedRepairs = mergeRepairs(currentRepairs, repairs, allDeletedRepairIds, allDeletedAuditIds);
 
     return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads(), getUsers());
   } catch (e) {
@@ -785,7 +902,7 @@ export function startRealtimeCloudSync(
     geoUpdated?: boolean;
     usersUpdated?: boolean;
   }) => void,
-  userId: string = 'FGRF-HQ-01'
+  userId: string = 'FGRF-MIS-01'
 ): () => void {
   let isSyncing = false;
   let lastSyncTimestamp = Date.now();

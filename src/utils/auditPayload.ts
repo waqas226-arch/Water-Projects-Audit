@@ -174,7 +174,7 @@ export function decodeAuditFromQr(payloadStr: string): AuditRecord | null {
       installationType: c.it || 'Hand Pump',
       installationDate: c.id || '',
       inspectionDateTime: c.dt || new Date().toISOString(),
-      inspectorId: 'FGRF-INS-101',
+      inspectorId: 'FGRF-MIS-01',
       inspectorName: c.in || 'Field Inspector',
       inspectorDesignation: c.ids || 'Inspector',
       checkpoints,

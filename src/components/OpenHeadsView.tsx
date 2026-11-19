@@ -173,6 +173,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteCategory = (index: number) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete category heads.');
+      return;
+    }
     const target = masterConfig.categories[index];
     if (confirm(`Are you sure you want to delete category "${target}"?`)) {
       const updated = {
@@ -230,6 +234,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteCondition = (id: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete condition heads.');
+      return;
+    }
     if (confirm(`Are you sure you want to delete condition head "${id}"?`)) {
       const updated = {
         ...masterConfig,
@@ -304,6 +312,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteQuestion = (id: number) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete inspection questions.');
+      return;
+    }
     if (confirm('Are you sure you want to delete this inspection question? (Note: Historical saved forms retain their original records).')) {
       const updated = {
         ...masterConfig,
@@ -469,6 +481,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteTehsil = (tehsilToRemove: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete tehsils.');
+      return;
+    }
     if (!confirm(`Delete Tehsil "${tehsilToRemove}"?`)) return;
     const updated = geoCountries.map((c) => {
       if (c.name !== selectedCountry.name) return c;
@@ -669,6 +685,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteCountry = (cName: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete countries.');
+      return;
+    }
     if (geoCountries.length <= 1) {
       showToast('Cannot delete the only remaining country in the system.');
       return;
@@ -697,6 +717,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteProvince = (pName: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete provinces.');
+      return;
+    }
     if (!selectedCountry) return;
     if (selectedCountry.provinces.length <= 1) {
       showToast('Cannot delete the only remaining province in this country.');
@@ -735,6 +759,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteDivision = (dName: string, provName?: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete divisions.');
+      return;
+    }
     const targetProvName = provName || selectedProvinceName;
     if (!confirm(`Are you sure you want to permanently delete Division "${dName}" and all its districts and tehsils?`)) {
       return;
@@ -777,6 +805,10 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   };
 
   const handleDeleteDistrict = (distName: string, divName?: string, provName?: string) => {
+    if (currentUser.role !== 'super_admin') {
+      showToast('Access Denied: Only HQ Super Admin has rights to delete districts.');
+      return;
+    }
     const targetProvName = provName || selectedProvinceName;
     const targetDivName = divName || selectedDivisionName;
     if (!confirm(`Are you sure you want to permanently delete District "${distName}" and all its tehsils?`)) {
