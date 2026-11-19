@@ -587,12 +587,10 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects);
   const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs);
 
-  // Merge Geo Hierarchy
+  // Synchronize Geo Hierarchy from authoritative Cloud Master DB
   let geoUpdated = false;
-  let mergedGeo = localGeo;
   if (cloud?.geoHierarchy && Array.isArray(cloud.geoHierarchy) && cloud.geoHierarchy.length > 0) {
-    mergedGeo = mergeGeoHierarchy(localGeo, cloud.geoHierarchy);
-    saveGeoHierarchy(mergedGeo);
+    saveGeoHierarchy(cloud.geoHierarchy);
     geoUpdated = true;
   }
 
@@ -625,7 +623,7 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   saveRepairs(mergedRepairs);
 
   // Push merged back to cloud
-  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, mergedGeo, mergedHeads);
+  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), mergedHeads);
 
   try {
     localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());

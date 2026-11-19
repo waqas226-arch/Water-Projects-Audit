@@ -760,8 +760,10 @@ export function getGeoHierarchy(): CountryInfo[] {
       return GLOBAL_COUNTRIES;
     }
     const parsed = JSON.parse(raw);
-    const merged = mergeGeoHierarchy(GLOBAL_COUNTRIES, parsed);
-    return merged;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    return GLOBAL_COUNTRIES;
   } catch {
     return GLOBAL_COUNTRIES;
   }

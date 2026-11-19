@@ -39,6 +39,18 @@ interface OpenHeadsViewProps {
 
 type ActiveHeadTab = 'geo' | 'categories' | 'questions' | 'conditions';
 
+interface EditingGeoState {
+  type: 'country' | 'province' | 'division' | 'district' | 'tehsil';
+  countryName: string;
+  provinceName?: string;
+  divisionName?: string;
+  districtName?: string;
+  currentName: string;
+  currentNameUrdu?: string;
+  newName: string;
+  newNameUrdu: string;
+}
+
 export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   currentUser,
   onRefreshGeo,
@@ -50,6 +62,9 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   const [masterConfig, setMasterConfig] = useState<MasterHeadsConfig>(() => getMasterHeads());
   // Geo hierarchy state
   const [geoCountries, setGeoCountries] = useState<CountryInfo[]>(() => getGeoHierarchy());
+
+  // Location Edit State (Country / Province / Division / District / Tehsil)
+  const [editingGeo, setEditingGeo] = useState<EditingGeoState | null>(null);
 
   // Category modal / editing
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -480,6 +495,310 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
     if (onRefreshGeo) onRefreshGeo();
   };
 
+  // ----------------------------------------------------------------------
+  // GEOGRAPHICAL EDIT & DELETE HANDLERS
+  // ----------------------------------------------------------------------
+  const handleStartEditGeo = (
+    type: 'country' | 'province' | 'division' | 'district',
+    name: string,
+    nameUrdu?: string,
+    provName?: string,
+    divName?: string
+  ) => {
+    setEditingGeo({
+      type,
+      countryName: selectedCountryName,
+      provinceName: provName || selectedProvinceName,
+      divisionName: divName || selectedDivisionName,
+      districtName: selectedDistrictName,
+      currentName: name,
+      currentNameUrdu: nameUrdu || name,
+      newName: name,
+      newNameUrdu: nameUrdu || name,
+    });
+  };
+
+  const handleStartEditTehsil = (tehsil: string) => {
+    setEditingGeo({
+      type: 'tehsil',
+      countryName: selectedCountryName,
+      provinceName: selectedProvinceName,
+      divisionName: selectedDivisionName,
+      districtName: selectedDistrictName,
+      currentName: tehsil,
+      newName: tehsil,
+      newNameUrdu: '',
+    });
+  };
+
+  const handleSaveEditGeo = () => {
+    if (!editingGeo) return;
+    const trimmedEn = editingGeo.newName.trim();
+    const trimmedUrdu = editingGeo.newNameUrdu.trim() || trimmedEn;
+
+    if (!trimmedEn) {
+      showToast('Name cannot be empty / نام خالی نہیں ہو سکتا');
+      return;
+    }
+
+    const { type, currentName } = editingGeo;
+    let updated = [...geoCountries];
+
+    if (type === 'country') {
+      updated = updated.map((c) =>
+        c.name === currentName ? { ...c, name: trimmedEn, nameUrdu: trimmedUrdu } : c
+      );
+      if (selectedCountryName === currentName) {
+        setSelectedCountryName(trimmedEn);
+      }
+    } else if (type === 'province') {
+      updated = updated.map((c) => {
+        if (c.name !== selectedCountryName) return c;
+        return {
+          ...c,
+          provinces: c.provinces.map((p) =>
+            p.name === currentName ? { ...p, name: trimmedEn, nameUrdu: trimmedUrdu } : p
+          ),
+        };
+      });
+      if (selectedProvinceName === currentName) {
+        setSelectedProvinceName(trimmedEn);
+      }
+    } else if (type === 'division') {
+      const targetProv = editingGeo.provinceName || selectedProvinceName;
+      updated = updated.map((c) => {
+        if (c.name !== selectedCountryName) return c;
+        return {
+          ...c,
+          provinces: c.provinces.map((p) => {
+            if (p.name !== targetProv) return p;
+            return {
+              ...p,
+              divisions: p.divisions.map((d) =>
+                d.name === currentName ? { ...d, name: trimmedEn, nameUrdu: trimmedUrdu } : d
+              ),
+            };
+          }),
+        };
+      });
+      if (selectedDivisionName === currentName) {
+        setSelectedDivisionName(trimmedEn);
+      }
+    } else if (type === 'district') {
+      const targetProv = editingGeo.provinceName || selectedProvinceName;
+      const targetDiv = editingGeo.divisionName || selectedDivisionName;
+      updated = updated.map((c) => {
+        if (c.name !== selectedCountryName) return c;
+        return {
+          ...c,
+          provinces: c.provinces.map((p) => {
+            if (p.name !== targetProv) return p;
+            return {
+              ...p,
+              divisions: p.divisions.map((d) => {
+                if (d.name !== targetDiv) return d;
+                return {
+                  ...d,
+                  districts: d.districts.map((dist) =>
+                    dist.name === currentName
+                      ? { ...dist, name: trimmedEn, nameUrdu: trimmedUrdu }
+                      : dist
+                  ),
+                };
+              }),
+            };
+          }),
+        };
+      });
+      if (selectedDistrictName === currentName) {
+        setSelectedDistrictName(trimmedEn);
+      }
+    } else if (type === 'tehsil') {
+      const targetProv = editingGeo.provinceName || selectedProvinceName;
+      const targetDiv = editingGeo.divisionName || selectedDivisionName;
+      const targetDist = editingGeo.districtName || selectedDistrictName;
+      updated = updated.map((c) => {
+        if (c.name !== selectedCountryName) return c;
+        return {
+          ...c,
+          provinces: c.provinces.map((p) => {
+            if (p.name !== targetProv) return p;
+            return {
+              ...p,
+              divisions: p.divisions.map((d) => {
+                if (d.name !== targetDiv) return d;
+                return {
+                  ...d,
+                  districts: d.districts.map((dist) => {
+                    if (dist.name !== targetDist) return dist;
+                    return {
+                      ...dist,
+                      tehsils: dist.tehsils.map((t) => (t === currentName ? trimmedEn : t)),
+                    };
+                  }),
+                };
+              }),
+            };
+          }),
+        };
+      });
+    }
+
+    setGeoCountries(updated);
+    handleSaveAndSyncGeo(updated);
+    setEditingGeo(null);
+    showToast(`Successfully updated ${type}: "${trimmedEn}"`);
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'MASTER_HEAD_UPDATE',
+      actionDescription: `Updated ${type} from "${currentName}" to "${trimmedEn}"`,
+    });
+  };
+
+  const handleDeleteCountry = (cName: string) => {
+    if (geoCountries.length <= 1) {
+      showToast('Cannot delete the only remaining country in the system.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to permanently delete Country "${cName}" and all its provinces, divisions, districts, and tehsils?`)) {
+      return;
+    }
+    const updated = geoCountries.filter((c) => c.name !== cName);
+    setGeoCountries(updated);
+    handleSaveAndSyncGeo(updated);
+    if (selectedCountryName === cName) {
+      const nextC = updated[0];
+      setSelectedCountryName(nextC?.name || '');
+      setSelectedProvinceName(nextC?.provinces[0]?.name || '');
+      setSelectedDivisionName(nextC?.provinces[0]?.divisions[0]?.name || '');
+      setSelectedDistrictName(nextC?.provinces[0]?.divisions[0]?.districts[0]?.name || '');
+    }
+    showToast(`Country "${cName}" deleted.`);
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'MASTER_HEAD_UPDATE',
+      actionDescription: `Deleted Country "${cName}"`,
+    });
+  };
+
+  const handleDeleteProvince = (pName: string) => {
+    if (!selectedCountry) return;
+    if (selectedCountry.provinces.length <= 1) {
+      showToast('Cannot delete the only remaining province in this country.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to permanently delete Province "${pName}" and all its divisions, districts, and tehsils?`)) {
+      return;
+    }
+    const updated = geoCountries.map((c) => {
+      if (c.name !== selectedCountry.name) return c;
+      return {
+        ...c,
+        provinces: c.provinces.filter((p) => p.name !== pName),
+      };
+    });
+    setGeoCountries(updated);
+    handleSaveAndSyncGeo(updated);
+    const targetC = updated.find((c) => c.name === selectedCountry.name);
+    const nextP = targetC?.provinces[0];
+    setSelectedProvinceName(nextP?.name || '');
+    setSelectedDivisionName(nextP?.divisions[0]?.name || '');
+    setSelectedDistrictName(nextP?.divisions[0]?.districts[0]?.name || '');
+    showToast(`Province "${pName}" deleted.`);
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'MASTER_HEAD_UPDATE',
+      actionDescription: `Deleted Province "${pName}" under ${selectedCountry.name}`,
+    });
+  };
+
+  const handleDeleteDivision = (dName: string, provName?: string) => {
+    const targetProvName = provName || selectedProvinceName;
+    if (!confirm(`Are you sure you want to permanently delete Division "${dName}" and all its districts and tehsils?`)) {
+      return;
+    }
+    const updated = geoCountries.map((c) => {
+      if (c.name !== selectedCountryName) return c;
+      return {
+        ...c,
+        provinces: c.provinces.map((p) => {
+          if (p.name !== targetProvName) return p;
+          return {
+            ...p,
+            divisions: p.divisions.filter((d) => d.name !== dName),
+          };
+        }),
+      };
+    });
+    setGeoCountries(updated);
+    handleSaveAndSyncGeo(updated);
+    if (selectedDivisionName === dName) {
+      const curC = updated.find((c) => c.name === selectedCountryName);
+      const curP = curC?.provinces.find((p) => p.name === targetProvName);
+      const nextD = curP?.divisions[0];
+      setSelectedDivisionName(nextD?.name || '');
+      setSelectedDistrictName(nextD?.districts[0]?.name || '');
+    }
+    showToast(`Division "${dName}" deleted.`);
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'MASTER_HEAD_UPDATE',
+      actionDescription: `Deleted Division "${dName}" under ${targetProvName}`,
+    });
+  };
+
+  const handleDeleteDistrict = (distName: string, divName?: string, provName?: string) => {
+    const targetProvName = provName || selectedProvinceName;
+    const targetDivName = divName || selectedDivisionName;
+    if (!confirm(`Are you sure you want to permanently delete District "${distName}" and all its tehsils?`)) {
+      return;
+    }
+    const updated = geoCountries.map((c) => {
+      if (c.name !== selectedCountryName) return c;
+      return {
+        ...c,
+        provinces: c.provinces.map((p) => {
+          if (p.name !== targetProvName) return p;
+          return {
+            ...p,
+            divisions: p.divisions.map((d) => {
+              if (d.name !== targetDivName) return d;
+              return {
+                ...d,
+                districts: d.districts.filter((dist) => dist.name !== distName),
+              };
+            }),
+          };
+        }),
+      };
+    });
+    setGeoCountries(updated);
+    handleSaveAndSyncGeo(updated);
+    if (selectedDistrictName === distName) {
+      const curC = updated.find((c) => c.name === selectedCountryName);
+      const curP = curC?.provinces.find((p) => p.name === targetProvName);
+      const curD = curP?.divisions.find((d) => d.name === targetDivName);
+      const nextDist = curD?.districts[0];
+      setSelectedDistrictName(nextDist?.name || '');
+    }
+    showToast(`District "${distName}" deleted.`);
+    logUserActivity({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      actionType: 'MASTER_HEAD_UPDATE',
+      actionDescription: `Deleted District "${distName}" under ${targetDivName}`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       
@@ -590,8 +909,32 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
           {/* Stepper Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             {/* Country Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">1. Select Country / ملک</label>
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <label className="block text-xs font-bold text-slate-700 truncate">1. Country / ملک</label>
+                {selectedCountry && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditGeo('country', selectedCountry.name, selectedCountry.nameUrdu)}
+                      className="p-1 px-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Edit Country ${selectedCountry.name}`}
+                    >
+                      <Edit3 className="w-3 h-3 text-emerald-600" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCountry(selectedCountry.name)}
+                      className="p-1 px-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Delete Country ${selectedCountry.name}`}
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 value={selectedCountryName}
                 onChange={(e) => {
@@ -601,7 +944,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
                   setSelectedDivisionName(c?.provinces[0]?.divisions[0]?.name || '');
                   setSelectedDistrictName(c?.provinces[0]?.divisions[0]?.districts[0]?.name || '');
                 }}
-                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
+                className="w-full text-xs p-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg font-bold text-slate-800 transition-colors"
               >
                 {geoCountries.map((c) => (
                   <option key={c.name} value={c.name}>
@@ -612,8 +955,32 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
             </div>
 
             {/* Province Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">2. Select Province / صوبہ</label>
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <label className="block text-xs font-bold text-slate-700 truncate">2. Province / صوبہ</label>
+                {selectedProvince && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditGeo('province', selectedProvince.name, selectedProvince.nameUrdu)}
+                      className="p-1 px-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Edit Province ${selectedProvince.name}`}
+                    >
+                      <Edit3 className="w-3 h-3 text-emerald-600" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProvince(selectedProvince.name)}
+                      className="p-1 px-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Delete Province ${selectedProvince.name}`}
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 value={selectedProvinceName}
                 onChange={(e) => {
@@ -622,7 +989,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
                   setSelectedDivisionName(p?.divisions[0]?.name || '');
                   setSelectedDistrictName(p?.divisions[0]?.districts[0]?.name || '');
                 }}
-                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
+                className="w-full text-xs p-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg font-bold text-slate-800 transition-colors"
               >
                 {selectedCountry?.provinces.map((p) => (
                   <option key={p.name} value={p.name}>
@@ -633,8 +1000,32 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
             </div>
 
             {/* Division Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">3. Select Division / ڈویژن</label>
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <label className="block text-xs font-bold text-slate-700 truncate">3. Division / ڈویژن</label>
+                {selectedDivision && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditGeo('division', selectedDivision.name, selectedDivision.nameUrdu)}
+                      className="p-1 px-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Edit Division ${selectedDivision.name}`}
+                    >
+                      <Edit3 className="w-3 h-3 text-emerald-600" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDivision(selectedDivision.name)}
+                      className="p-1 px-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Delete Division ${selectedDivision.name}`}
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 value={selectedDivisionName}
                 onChange={(e) => {
@@ -642,7 +1033,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
                   const d = selectedProvince?.divisions.find((item) => item.name === e.target.value);
                   setSelectedDistrictName(d?.districts[0]?.name || '');
                 }}
-                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
+                className="w-full text-xs p-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg font-bold text-slate-800 transition-colors"
               >
                 {selectedProvince?.divisions.map((d) => (
                   <option key={d.name} value={d.name}>
@@ -653,12 +1044,36 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
             </div>
 
             {/* District Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">4. Select District / ضلع</label>
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <label className="block text-xs font-bold text-slate-700 truncate">4. District / ضلع</label>
+                {selectedDistrict && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditGeo('district', selectedDistrict.name, selectedDistrict.nameUrdu)}
+                      className="p-1 px-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Edit District ${selectedDistrict.name}`}
+                    >
+                      <Edit3 className="w-3 h-3 text-emerald-600" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDistrict(selectedDistrict.name)}
+                      className="p-1 px-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors border border-slate-200"
+                      title={`Delete District ${selectedDistrict.name}`}
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 value={selectedDistrictName}
                 onChange={(e) => setSelectedDistrictName(e.target.value)}
-                className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-800"
+                className="w-full text-xs p-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg font-bold text-slate-800 transition-colors"
               >
                 {selectedDivision?.districts.map((d) => (
                   <option key={d.name} value={d.name}>
@@ -688,16 +1103,24 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
                 {selectedDistrict.tehsils.map((t) => (
                   <div
                     key={t}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 shadow-2xs group"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 shadow-2xs hover:border-emerald-400 transition-colors"
                   >
                     <span>{t}</span>
                     <button
                       type="button"
+                      onClick={() => handleStartEditTehsil(t)}
+                      className="p-0.5 text-slate-400 hover:text-emerald-700 transition-colors cursor-pointer"
+                      title={`Edit Tehsil ${t}`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-emerald-600" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteTehsil(t)}
-                      className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                      className="p-0.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                       title={`Delete Tehsil ${t}`}
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                     </button>
                   </div>
                 ))}
@@ -830,6 +1253,97 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Registered Locations Management Directory for Selected Province */}
+          {selectedProvince && (
+            <div className="bg-slate-50/70 rounded-xl border border-slate-200 p-4 space-y-3 mt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-2">
+                    <FolderTree className="w-4 h-4 text-emerald-700" />
+                    <span>Registered Divisions & Districts in {selectedProvince.name} ({selectedProvince.nameUrdu})</span>
+                  </h3>
+                  <div className="font-urdu text-[11px] text-slate-500">
+                    صوبہ {selectedProvince.nameUrdu} کے تمام ڈویژنز اور اضلاع میں ترمیم یا حذف کریں
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  {selectedProvince.divisions.length} Divisions • {selectedProvince.divisions.reduce((acc, d) => acc + d.districts.length, 0)} Districts
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {selectedProvince.divisions.map((div) => (
+                  <div key={div.name} className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-100/80 p-2.5 rounded-lg border border-slate-200/60">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-extrabold text-slate-900">{div.name}</span>
+                        <span className="font-urdu text-xs text-emerald-800 font-bold">({div.nameUrdu})</span>
+                        <span className="text-[10px] bg-white border border-slate-300 text-slate-700 font-mono px-2 py-0.5 rounded font-bold">
+                          {div.districts.length} Districts
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditGeo('division', div.name, div.nameUrdu, selectedProvince.name)}
+                          className="px-2 py-1 bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-300 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title={`Edit Division ${div.name}`}
+                        >
+                          <Edit3 className="w-3 h-3 text-emerald-600" />
+                          <span>Edit Division</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDivision(div.name, selectedProvince.name)}
+                          className="px-2 py-1 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-300 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title={`Delete Division ${div.name}`}
+                        >
+                          <Trash2 className="w-3 h-3 text-rose-500" />
+                          <span>Delete Division</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Districts under this division */}
+                    {div.districts.length === 0 ? (
+                      <div className="text-xs text-slate-400 italic pl-2">No districts registered in this division yet.</div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        {div.districts.map((dst) => (
+                          <div key={dst.name} className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 text-xs hover:border-emerald-300 transition-colors">
+                            <div className="pr-2 truncate">
+                              <div className="font-bold text-slate-900 truncate">{dst.name}</div>
+                              <div className="font-urdu text-[11px] text-emerald-800 font-semibold">{dst.nameUrdu}</div>
+                              <div className="text-[10px] text-slate-400">{dst.tehsils.length} tehsils</div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditGeo('district', dst.name, dst.nameUrdu, selectedProvince.name, div.name)}
+                                className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-white border border-transparent hover:border-slate-200 rounded cursor-pointer transition-colors"
+                                title={`Edit District ${dst.name}`}
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-emerald-600" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDistrict(dst.name, div.name, selectedProvince.name)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-white border border-transparent hover:border-slate-200 rounded cursor-pointer transition-colors"
+                                title={`Delete District ${dst.name}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1365,6 +1879,93 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================== */}
+      {/* LOCATION EDIT MODAL (Country / Province / Division / District / Tehsil) */}
+      {/* ====================================================================== */}
+      {editingGeo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-white">
+                    Edit {editingGeo.type.charAt(0).toUpperCase() + editingGeo.type.slice(1)}
+                  </h3>
+                  <div className="font-urdu text-xs text-emerald-300">
+                    {editingGeo.type === 'country' ? 'ملک' : editingGeo.type === 'province' ? 'صوبہ' : editingGeo.type === 'division' ? 'ڈویژن' : editingGeo.type === 'district' ? 'ضلع' : 'تحصیل'} کی معلومات میں ترمیم
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingGeo(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Name (English) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingGeo.newName}
+                  onChange={(e) => setEditingGeo({ ...editingGeo, newName: e.target.value })}
+                  placeholder="Enter name in English"
+                  autoFocus
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {editingGeo.type !== 'tehsil' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Name (Urdu / اردو نام)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingGeo.newNameUrdu}
+                    onChange={(e) => setEditingGeo({ ...editingGeo, newNameUrdu: e.target.value })}
+                    placeholder="اردو نام درج کریں"
+                    dir="rtl"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-urdu text-right text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
+
+              <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                Current: <span className="font-bold text-slate-800">{editingGeo.currentName}</span>
+                {editingGeo.currentNameUrdu ? ` (${editingGeo.currentNameUrdu})` : ''} • Changes synchronize automatically to the Central Cloud Master DB.
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingGeo(null)}
+                className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel / منسوخ
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditGeo}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Changes / محفوظ کریں</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
