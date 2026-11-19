@@ -38,10 +38,15 @@ import {
   getAudits, 
   getProjects, 
   getRepairs, 
+  getGeoHierarchy,
+  saveGeoHierarchy,
+  getMasterHeads,
+  saveMasterHeads,
   saveAudits, 
   saveProjects, 
   saveRepairs 
 } from '../utils/storage.ts';
+import { mergeGeoHierarchy } from '../utils/pakistanGeo.ts';
 
 interface CloudMasterDbModalProps {
   isOpen: boolean;
@@ -131,10 +136,17 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
   const handleForcePush = async () => {
     setIsSyncing(true);
     try {
-      const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), currentUser.id);
+      const success = await pushLocalToCloud(
+        getAudits(),
+        getProjects(),
+        getRepairs(),
+        currentUser.id,
+        getGeoHierarchy(),
+        getMasterHeads()
+      );
       if (success) {
         setLastSync(new Date().toISOString());
-        showToast('All local inspection records successfully uploaded to Cloud Master DB!');
+        showToast('All local inspection records and locations uploaded to Cloud Master DB!');
         await handleTestConnection(false);
       } else {
         showToast('Upload failed. Verify cloud endpoint URL.');
@@ -179,6 +191,8 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
       audits: getAudits(),
       projects: getProjects(),
       repairs: getRepairs(),
+      geoHierarchy: getGeoHierarchy(),
+      masterHeads: getMasterHeads(),
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -220,11 +234,27 @@ export const CloudMasterDbModal: React.FC<CloudMasterDbModalProps> = ({
         saveProjects(mergedProjects);
         saveRepairs(mergedRepairs);
 
+        if (parsed.geoHierarchy && Array.isArray(parsed.geoHierarchy) && parsed.geoHierarchy.length > 0) {
+          const mergedGeo = mergeGeoHierarchy(getGeoHierarchy(), parsed.geoHierarchy);
+          saveGeoHierarchy(mergedGeo);
+        }
+
+        if (parsed.masterHeads && typeof parsed.masterHeads === 'object') {
+          saveMasterHeads(parsed.masterHeads);
+        }
+
         onDataUpdated();
         showToast(`Imported & Merged: ${newAudits} new audits, ${newProjects} new projects!`);
 
         // Also push merged to cloud
-        await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, currentUser.id);
+        await pushLocalToCloud(
+          mergedAudits,
+          mergedProjects,
+          mergedRepairs,
+          currentUser.id,
+          getGeoHierarchy(),
+          getMasterHeads()
+        );
       } catch (err: any) {
         showToast(`Import failed: ${err?.message || 'Could not parse JSON'}`);
       }

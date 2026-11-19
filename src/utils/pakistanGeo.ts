@@ -316,6 +316,68 @@ export const PAKISTAN_PROVINCES: ProvinceInfo[] = [
             lat: 30.1798,
             lng: 66.9750,
           },
+          {
+            name: 'Pishin',
+            nameUrdu: 'پشین',
+            tehsils: ['Pishin', 'Karezat', 'Barshore', 'Hurramzai'],
+            lat: 30.5818,
+            lng: 66.9961,
+          },
+          {
+            name: 'Killa Abdullah',
+            nameUrdu: 'قلعہ عبداللہ',
+            tehsils: ['Killa Abdullah', 'Gulistan', 'Dobandi'],
+            lat: 30.7278,
+            lng: 66.6606,
+          },
+          {
+            name: 'Chaman',
+            nameUrdu: 'چمن',
+            tehsils: ['Chaman City', 'Chaman Saddar'],
+            lat: 30.9210,
+            lng: 66.4597,
+          },
+        ],
+      },
+      {
+        name: 'Naseerabad',
+        nameUrdu: 'نصیرآباد',
+        districts: [
+          {
+            name: 'Naseerabad',
+            nameUrdu: 'نصیرآباد',
+            tehsils: ['Dera Murad Jamali', 'Tamboo', 'Chattar', 'Baba Kot'],
+            lat: 28.5466,
+            lng: 68.2231,
+          },
+          {
+            name: 'Jaffarabad',
+            nameUrdu: 'جعفرآباد',
+            tehsils: ['Dera Allah Yar', 'Jhatpat', 'Usta Muhammad'],
+            lat: 28.4342,
+            lng: 68.4507,
+          },
+          {
+            name: 'Jhal Magsi',
+            nameUrdu: 'جھل مگسی',
+            tehsils: ['Gandawa', 'Jhal Magsi', 'Mirpur'],
+            lat: 28.2223,
+            lng: 67.4839,
+          },
+          {
+            name: 'Sohbatpur',
+            nameUrdu: 'صحبت پور',
+            tehsils: ['Sohbatpur', 'Faridabad', 'Manjhipur', 'Hairdin'],
+            lat: 28.5204,
+            lng: 68.5428,
+          },
+          {
+            name: 'Kachhi',
+            nameUrdu: 'کچھی / بولان',
+            tehsils: ['Dhadar', 'Mach', 'Bhag', 'Sani'],
+            lat: 29.4756,
+            lng: 67.6517,
+          },
         ],
       },
       {
@@ -328,6 +390,20 @@ export const PAKISTAN_PROVINCES: ProvinceInfo[] = [
             tehsils: ['Gwadar', 'Pasni', 'Ormara', 'Jiwani'],
             lat: 25.1216,
             lng: 62.3254,
+          },
+          {
+            name: 'Kech',
+            nameUrdu: 'کیچ / تربت',
+            tehsils: ['Turbat', 'Mand', 'Tump', 'Buleda', 'Dasht'],
+            lat: 25.9964,
+            lng: 63.0789,
+          },
+          {
+            name: 'Panjgur',
+            nameUrdu: 'پنجگور',
+            tehsils: ['Panjgur', 'Gowargo', 'Gichk', 'Paroom'],
+            lat: 26.9644,
+            lng: 64.0903,
           },
         ],
       },
@@ -348,6 +424,143 @@ export const PAKISTAN_PROVINCES: ProvinceInfo[] = [
             tehsils: ['Khuzdar', 'Wadh', 'Zehri', 'Nal', 'Moola', 'Karkh'],
             lat: 27.8163,
             lng: 66.6177,
+          },
+          {
+            name: 'Kalat',
+            nameUrdu: 'قلات',
+            tehsils: ['Kalat', 'Mangocher', 'Surab'],
+            lat: 29.0266,
+            lng: 66.5936,
+          },
+          {
+            name: 'Mastung',
+            nameUrdu: 'مستونگ',
+            tehsils: ['Mastung', 'Dasht', 'Khad Koocha', 'Kardigap'],
+            lat: 29.7997,
+            lng: 66.8455,
+          },
+          {
+            name: 'Awaran',
+            nameUrdu: 'آواران',
+            tehsils: ['Awaran', 'Jhal Jhao', 'Mashkay', 'Gishkaur'],
+            lat: 26.4568,
+            lng: 65.2314,
+          },
+        ],
+      },
+      {
+        name: 'Sibi',
+        nameUrdu: 'سبی',
+        districts: [
+          {
+            name: 'Sibi',
+            nameUrdu: 'سبی',
+            tehsils: ['Sibi', 'Sangan', 'Babra Trikha'],
+            lat: 29.5543,
+            lng: 67.8817,
+          },
+          {
+            name: 'Dera Bugti',
+            nameUrdu: 'ڈیرہ بگٹی',
+            tehsils: ['Dera Bugti', 'Sui', 'Phelawagh'],
+            lat: 29.0307,
+            lng: 69.1585,
+          },
+          {
+            name: 'Kohlu',
+            nameUrdu: 'کوہلو',
+            tehsils: ['Kohlu', 'Maiwand', 'Kahan'],
+            lat: 29.8965,
+            lng: 69.2532,
+          },
+          {
+            name: 'Ziarat',
+            nameUrdu: 'زیارت',
+            tehsils: ['Ziarat', 'Sinjawi'],
+            lat: 30.3824,
+            lng: 67.7256,
+          },
+          {
+            name: 'Harnai',
+            nameUrdu: 'ہرنائی',
+            tehsils: ['Harnai', 'Shahrag', 'Khoast'],
+            lat: 30.1008,
+            lng: 67.9374,
+          },
+        ],
+      },
+      {
+        name: 'Zhob',
+        nameUrdu: 'ژوب',
+        districts: [
+          {
+            name: 'Zhob',
+            nameUrdu: 'ژوب',
+            tehsils: ['Zhob', 'Sambaza', 'Ashwat'],
+            lat: 31.3417,
+            lng: 69.4486,
+          },
+          {
+            name: 'Loralai',
+            nameUrdu: 'لورالائی',
+            tehsils: ['Loralai', 'Bori', 'Mekhtar'],
+            lat: 30.3705,
+            lng: 68.5979,
+          },
+          {
+            name: 'Killa Saifullah',
+            nameUrdu: 'قلعہ سیف اللہ',
+            tehsils: ['Killa Saifullah', 'Muslim Bagh', 'Loiband'],
+            lat: 30.7008,
+            lng: 68.3598,
+          },
+          {
+            name: 'Musakhel',
+            nameUrdu: 'موسیٰ خیل',
+            tehsils: ['Musakhel', 'Kingri', 'Toisar'],
+            lat: 30.8679,
+            lng: 69.8221,
+          },
+          {
+            name: 'Barkhan',
+            nameUrdu: 'بارکھان',
+            tehsils: ['Barkhan'],
+            lat: 29.8977,
+            lng: 69.5251,
+          },
+        ],
+      },
+      {
+        name: 'Rakhshan',
+        nameUrdu: 'رخشان',
+        districts: [
+          {
+            name: 'Kharan',
+            nameUrdu: 'خاران',
+            tehsils: ['Kharan', 'Sar-Kharan', 'Basima'],
+            lat: 28.5833,
+            lng: 65.4167,
+          },
+          {
+            name: 'Nushki',
+            nameUrdu: 'نوشکی',
+            tehsils: ['Nushki', 'Dak'],
+            lat: 29.5539,
+            lng: 66.0214,
+          },
+          {
+            name: 'Chagai',
+            nameUrdu: 'چاغی',
+            tehsils: ['Dalbandin', 'Taftan', 'Nok Kundi', 'Chagai'],
+            lat: 28.8953,
+            lng: 64.4072,
+          },
+          {
+            name: 'Washuk',
+            nameUrdu: 'واشک',
+            tehsils: ['Washuk', 'Besima', 'Mashkel'],
+            lat: 27.9575,
+            lng: 64.7131,
           },
         ],
       },
@@ -957,4 +1170,61 @@ export function getAllDistricts(): { province: string; district: DistrictInfo }[
 
 export function findDistrictCoordinates(districtName: string): { lat: number; lng: number } {
   return findGlobalDistrictCoordinates(undefined, districtName);
+}
+
+/**
+ * Intelligent Two-Way Deep Merge for Global Geographical Hierarchy
+ * Merges countries, provinces, divisions, districts, and tehsils without data loss.
+ */
+export function mergeGeoHierarchy(base: CountryInfo[], incoming: CountryInfo[]): CountryInfo[] {
+  if (!Array.isArray(incoming) || incoming.length === 0) return JSON.parse(JSON.stringify(base || []));
+  if (!Array.isArray(base) || base.length === 0) return JSON.parse(JSON.stringify(incoming || []));
+
+  const result: CountryInfo[] = JSON.parse(JSON.stringify(base));
+
+  incoming.forEach((inCountry) => {
+    if (!inCountry || !inCountry.name) return;
+    let targetCountry = result.find((c) => c.name.toLowerCase() === inCountry.name.toLowerCase());
+    if (!targetCountry) {
+      result.push(JSON.parse(JSON.stringify(inCountry)));
+      return;
+    }
+
+    (inCountry.provinces || []).forEach((inProv) => {
+      if (!inProv || !inProv.name) return;
+      let targetProv = targetCountry!.provinces.find((p) => p.name.toLowerCase() === inProv.name.toLowerCase());
+      if (!targetProv) {
+        targetCountry!.provinces.push(JSON.parse(JSON.stringify(inProv)));
+        return;
+      }
+
+      (inProv.divisions || []).forEach((inDiv) => {
+        if (!inDiv || !inDiv.name) return;
+        let targetDiv = targetProv!.divisions.find((d) => d.name.toLowerCase() === inDiv.name.toLowerCase());
+        if (!targetDiv) {
+          targetProv!.divisions.push(JSON.parse(JSON.stringify(inDiv)));
+          return;
+        }
+
+        (inDiv.districts || []).forEach((inDist) => {
+          if (!inDist || !inDist.name) return;
+          let targetDist = targetDiv!.districts.find((dst) => dst.name.toLowerCase() === inDist.name.toLowerCase());
+          if (!targetDist) {
+            targetDiv!.districts.push(JSON.parse(JSON.stringify(inDist)));
+            return;
+          }
+
+          const existingTehsilLower = new Set(targetDist.tehsils.map((t) => t.toLowerCase()));
+          (inDist.tehsils || []).forEach((t) => {
+            if (t && !existingTehsilLower.has(t.toLowerCase())) {
+              targetDist!.tehsils.push(t);
+              existingTehsilLower.add(t.toLowerCase());
+            }
+          });
+        });
+      });
+    });
+  });
+
+  return result;
 }

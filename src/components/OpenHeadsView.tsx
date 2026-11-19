@@ -29,6 +29,7 @@ import {
   logUserActivity, 
   DEFAULT_MASTER_HEADS_CONFIG 
 } from '../utils/storage.ts';
+import { publishGeoHierarchyToCloud, publishMasterHeadsToCloud } from '../utils/cloudSync.ts';
 
 interface OpenHeadsViewProps {
   currentUser: UserProfile;
@@ -100,6 +101,18 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   const [newDistrictUrdu, setNewDistrictUrdu] = useState('');
   const [newTehsilName, setNewTehsilName] = useState('');
 
+  // Auto-save and sync to Cloud Master DB
+  const handleSaveAndSyncHeads = (updated: MasterHeadsConfig) => {
+    saveMasterHeads(updated);
+    publishMasterHeadsToCloud(updated, currentUser.id).catch(() => {});
+  };
+
+  const handleSaveAndSyncGeo = (updated: CountryInfo[]) => {
+    saveGeoHierarchy(updated);
+    publishGeoHierarchyToCloud(updated, currentUser.id).catch(() => {});
+    if (onRefreshGeo) onRefreshGeo();
+  };
+
   // ----------------------------------------------------------------------
   // CATEGORIES HANDLERS
   // ----------------------------------------------------------------------
@@ -116,7 +129,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       categories: [...masterConfig.categories, trimmed],
     };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setNewCategoryName('');
     showToast(`Added new project category: "${trimmed}"`);
     logUserActivity({
@@ -135,7 +148,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
     newCats[index] = trimmed;
     const updated = { ...masterConfig, categories: newCats };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setEditingCategoryIndex(null);
     showToast('Category updated successfully.');
   };
@@ -148,7 +161,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
         categories: masterConfig.categories.filter((_, i) => i !== index),
       };
       setMasterConfig(updated);
-      saveMasterHeads(updated);
+      handleSaveAndSyncHeads(updated);
       showToast(`Category "${target}" deleted.`);
     }
   };
@@ -171,7 +184,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       conditions: [...masterConfig.conditions, newHead],
     };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setNewConditionEn('');
     setNewConditionUrdu('');
     showToast(`Added overall condition head: "${newHead.labelEn}"`);
@@ -192,7 +205,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       ),
     };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setEditingConditionId(null);
     showToast('Overall condition updated.');
   };
@@ -204,7 +217,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
         conditions: masterConfig.conditions.filter((c) => c.id !== id),
       };
       setMasterConfig(updated);
-      saveMasterHeads(updated);
+      handleSaveAndSyncHeads(updated);
       showToast(`Condition "${id}" removed.`);
     }
   };
@@ -234,7 +247,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       questions: [...masterConfig.questions, newQ],
     };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setNewQuestionEn('');
     setNewQuestionUrdu('');
     setNewQuestionCategory('all');
@@ -266,7 +279,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       ),
     };
     setMasterConfig(updated);
-    saveMasterHeads(updated);
+    handleSaveAndSyncHeads(updated);
     setEditingQuestionId(null);
     showToast('Question checkpoint updated for future inspections.');
   };
@@ -280,7 +293,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
           .map((q, idx) => ({ ...q, number: idx + 1 })),
       };
       setMasterConfig(updated);
-      saveMasterHeads(updated);
+      handleSaveAndSyncHeads(updated);
       showToast('Question deleted successfully.');
     }
   };
@@ -305,7 +318,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
     };
     const updated = [...geoCountries, newC];
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     setSelectedCountryName(name);
     setNewCountryName('');
     setNewCountryUrdu('');
@@ -327,7 +340,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
         : c
     );
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     setSelectedProvinceName(pName);
     setNewProvinceName('');
     setNewProvinceUrdu('');
@@ -355,7 +368,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       };
     });
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     setSelectedDivisionName(dName);
     setNewDivisionName('');
     setNewDivisionUrdu('');
@@ -391,7 +404,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       };
     });
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     setSelectedDistrictName(distName);
     setNewDistrictName('');
     setNewDistrictUrdu('');
@@ -430,7 +443,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       };
     });
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     setNewTehsilName('');
     showToast(`Tehsil "${tName}" added to ${selectedDistrict.name}.`);
     if (onRefreshGeo) onRefreshGeo();
@@ -462,7 +475,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       };
     });
     setGeoCountries(updated);
-    saveGeoHierarchy(updated);
+    handleSaveAndSyncGeo(updated);
     showToast(`Tehsil "${tehsilToRemove}" removed.`);
     if (onRefreshGeo) onRefreshGeo();
   };

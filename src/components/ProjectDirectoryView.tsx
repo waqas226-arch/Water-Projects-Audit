@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { InstallationType, OverallCondition, UserProfile, WaterProject } from '../types/index.ts';
 import { validateProjectId } from '../utils/auditLogic.ts';
-import { GLOBAL_COUNTRIES, PAKISTAN_PROVINCES, findGlobalDistrictCoordinates, findDistrictCoordinates } from '../utils/pakistanGeo.ts';
+import { GLOBAL_COUNTRIES, PAKISTAN_PROVINCES, CountryInfo, findGlobalDistrictCoordinates, findDistrictCoordinates } from '../utils/pakistanGeo.ts';
 import { getMasterHeads, getGeoHierarchy, logUserActivity } from '../utils/storage.ts';
 
 interface ProjectDirectoryViewProps {
@@ -30,6 +30,7 @@ interface ProjectDirectoryViewProps {
   onSelectProjectForAudit: (projectId: string) => void;
   onUpdateProject?: (updated: WaterProject) => void;
   onDeleteProject?: (id: string) => void;
+  geoHierarchy?: CountryInfo[];
 }
 
 export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
@@ -40,6 +41,7 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
   onSelectProjectForAudit,
   onUpdateProject,
   onDeleteProject,
+  geoHierarchy: propGeoHierarchy,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCountry, setFilterCountry] = useState<string>('all');

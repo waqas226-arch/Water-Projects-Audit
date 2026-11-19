@@ -73,6 +73,7 @@ interface AuditFormViewProps {
   preselectedProjectId?: string;
   onCancel?: () => void;
   onViewAuditCertificate?: (audit: AuditRecord) => void;
+  geoHierarchy?: CountryInfo[];
 }
 
 export const AuditFormView: React.FC<AuditFormViewProps> = ({
@@ -82,6 +83,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   preselectedProjectId,
   onCancel,
   onViewAuditCertificate,
+  geoHierarchy: propGeoHierarchy,
 }) => {
   // Pre-fill if a project is selected
   const initialProject = preselectedProjectId
@@ -98,7 +100,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
 
   // Master Heads & Geographic Configuration from Storage
   const masterHeads = React.useMemo(() => getMasterHeads(), []);
-  const geoHierarchy = React.useMemo(() => getGeoHierarchy(), []);
+  const geoHierarchy = propGeoHierarchy || getGeoHierarchy();
 
   // Section A states: Global 5-tier Hierarchy (Country -> Province -> Division -> District -> Tahseel/Town)
   const [country, setCountry] = useState(initialProject?.country || currentUser.country || 'Pakistan');

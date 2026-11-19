@@ -8,9 +8,23 @@
  * Author: Syed Waqas, Manager MIS (Data Management & ERP Department - FGRF)
  */
 
-import { AuditRecord, WaterProject, RepairItem } from '../types/index.ts';
+import { AuditRecord, WaterProject, RepairItem, MasterHeadsConfig } from '../types/index.ts';
 import { createDefaultCheckpoints } from './auditLogic.ts';
-import { getAudits, getProjects, getRepairs, saveAudits, saveProjects, saveRepairs, getDeletedAuditIds, getDeletedProjectIds } from './storage.ts';
+import { CountryInfo, mergeGeoHierarchy } from './pakistanGeo.ts';
+import { 
+  getAudits, 
+  getProjects, 
+  getRepairs, 
+  saveAudits, 
+  saveProjects, 
+  saveRepairs, 
+  getDeletedAuditIds, 
+  getDeletedProjectIds,
+  getGeoHierarchy,
+  saveGeoHierarchy,
+  getMasterHeads,
+  saveMasterHeads
+} from './storage.ts';
 
 // Default global cloud relay endpoint for FGRF Water Projects Master Database
 const DEFAULT_CLOUD_CONTAINER_ID = 'ff808181a09d98f701a1d9c2b0322914';
@@ -47,6 +61,8 @@ function doGet(e) {
     audits: [],
     projects: [],
     repairs: [],
+    geoHierarchy: [],
+    masterHeads: null,
     lastUpdated: new Date().toISOString(),
     updatedBy: "FGRF-Init"
   };
@@ -93,6 +109,8 @@ function doPost(e) {
       audits: Object.keys(auditsMap).map(function(k) { return auditsMap[k]; }),
       projects: Object.keys(projectsMap).map(function(k) { return projectsMap[k]; }),
       repairs: Object.keys(repairsMap).map(function(k) { return repairsMap[k]; }),
+      geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || [],
+      masterHeads: incoming.masterHeads || current.masterHeads || null,
       lastUpdated: new Date().toISOString(),
       updatedBy: incoming.updatedBy || "Field Staff"
     };
@@ -125,6 +143,8 @@ export interface CloudDatabasePayload {
   audits: AuditRecord[];
   projects: WaterProject[];
   repairs: RepairItem[];
+  geoHierarchy?: CountryInfo[];
+  masterHeads?: MasterHeadsConfig;
   lastUpdated: string;
   updatedBy?: string;
 }
@@ -133,6 +153,7 @@ export interface SyncResult {
   success: boolean;
   newAuditsCount: number;
   newProjectsCount: number;
+  geoUpdated?: boolean;
   message: string;
   timestamp: string;
 }
@@ -289,6 +310,8 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
         repairs: Array.isArray(data.repairs)
           ? data.repairs.filter((r) => r && r.id && String(r.id).trim().toUpperCase() !== 'REP-2026-0001')
           : [],
+        geoHierarchy: Array.isArray(data.geoHierarchy) ? data.geoHierarchy : undefined,
+        masterHeads: (data.masterHeads && typeof data.masterHeads === 'object') ? data.masterHeads : undefined,
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         updatedBy: data.updatedBy
       };
@@ -305,6 +328,8 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     audits: localAudits,
     projects: localProjects,
     repairs: localRepairs,
+    geoHierarchy: getGeoHierarchy(),
+    masterHeads: getMasterHeads(),
     lastUpdated: getLastSyncTime() || new Date().toISOString(),
     updatedBy: 'Local Cache'
   };
@@ -360,10 +385,12 @@ export async function pushToGitHubMasterDb(
  * Push local master database records to Cloud
  */
 export async function pushLocalToCloud(
-  audits: AuditRecord[],
-  projects: WaterProject[],
-  repairs: RepairItem[],
-  userId: string = 'FGRF-HQ-01'
+  audits: AuditRecord[] = getAudits(),
+  projects: WaterProject[] = getProjects(),
+  repairs: RepairItem[] = getRepairs(),
+  userId: string = 'FGRF-HQ-01',
+  geoHierarchy: CountryInfo[] = getGeoHierarchy(),
+  masterHeads: MasterHeadsConfig = getMasterHeads()
 ): Promise<boolean> {
   const endpoint = getCloudSyncEndpoint();
   const ghToken = getGitHubToken();
@@ -372,6 +399,8 @@ export async function pushLocalToCloud(
     audits,
     projects,
     repairs,
+    geoHierarchy,
+    masterHeads,
     lastUpdated: new Date().toISOString(),
     updatedBy: userId
   };
@@ -521,6 +550,20 @@ export function mergeRepairs(local: RepairItem[], remote: RepairItem[]): RepairI
   return Array.from(map.values());
 }
 
+export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+  saveGeoHierarchy(geo);
+  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, geo, getMasterHeads());
+  syncBus?.postMessage({ type: 'GEO_SYNCED', timestamp: new Date().toISOString() });
+  return success;
+}
+
+export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId: string = 'FGRF-HQ-01'): Promise<boolean> {
+  saveMasterHeads(heads);
+  const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, getGeoHierarchy(), heads);
+  syncBus?.postMessage({ type: 'HEADS_SYNCED', timestamp: new Date().toISOString() });
+  return success;
+}
+
 /**
  * Full two-way synchronization:
  * 1. Downloads remote cloud data
@@ -531,6 +574,8 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const localAudits = getAudits();
   const localProjects = getProjects();
   const localRepairs = getRepairs();
+  const localGeo = getGeoHierarchy();
+  const localHeads = getMasterHeads();
 
   const cloud = await fetchCloudData();
   const remoteAudits = cloud?.audits || [];
@@ -542,26 +587,64 @@ export async function syncAllWithCloud(userId: string = 'FGRF-HQ-01'): Promise<S
   const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects);
   const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs);
 
+  // Merge Geo Hierarchy
+  let geoUpdated = false;
+  let mergedGeo = localGeo;
+  if (cloud?.geoHierarchy && Array.isArray(cloud.geoHierarchy) && cloud.geoHierarchy.length > 0) {
+    mergedGeo = mergeGeoHierarchy(localGeo, cloud.geoHierarchy);
+    saveGeoHierarchy(mergedGeo);
+    geoUpdated = true;
+  }
+
+  // Merge Master Heads
+  let mergedHeads = localHeads;
+  if (cloud?.masterHeads && typeof cloud.masterHeads === 'object') {
+    mergedHeads = {
+      ...localHeads,
+      ...cloud.masterHeads,
+      categories: Array.from(new Set([...(localHeads.categories || []), ...(cloud.masterHeads.categories || [])])),
+      conditions: [
+        ...(localHeads.conditions || []),
+        ...((cloud.masterHeads.conditions || []).filter(
+          (c) => !(localHeads.conditions || []).some((lc) => lc.id === c.id)
+        ))
+      ],
+      questions: [
+        ...(localHeads.questions || []),
+        ...((cloud.masterHeads.questions || []).filter(
+          (q) => !(localHeads.questions || []).some((lq) => lq.id === q.id)
+        ))
+      ]
+    };
+    saveMasterHeads(mergedHeads);
+  }
+
   // Save merged locally
   saveAudits(mergedAudits);
   saveProjects(mergedProjects);
   saveRepairs(mergedRepairs);
 
   // Push merged back to cloud
-  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId);
+  await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, mergedGeo, mergedHeads);
 
   try {
     localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
   } catch {}
 
-  const countMsg = (newAuditsCount > 0 || newProjectsCount > 0)
-    ? `Received ${newAuditsCount} new audit(s) & ${newProjectsCount} new project(s) from cloud.`
-    : `All records synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects).`;
+  const parts: string[] = [];
+  if (newAuditsCount > 0) parts.push(`${newAuditsCount} new audit(s)`);
+  if (newProjectsCount > 0) parts.push(`${newProjectsCount} new project(s)`);
+  if (geoUpdated) parts.push(`locations updated`);
+
+  const countMsg = parts.length > 0 
+    ? `Received ${parts.join(', ')} from cloud.`
+    : `All records & locations synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects).`;
 
   return {
     success: true,
     newAuditsCount,
     newProjectsCount,
+    geoUpdated,
     message: `Cloud Master DB Live (Online Mode): ${countMsg}`,
     timestamp: new Date().toISOString()
   };
@@ -581,7 +664,7 @@ export async function publishAuditToCloud(audit: AuditRecord, project: WaterProj
     const { merged: mergedProjects } = mergeProjects(currentProjects, [project]);
     const mergedRepairs = mergeRepairs(currentRepairs, repairs);
 
-    return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId);
+    return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads());
   } catch (e) {
     console.warn('[FGRF Cloud Sync] Failed to publish audit to cloud:', e);
     return false;
@@ -594,7 +677,15 @@ export async function publishAuditToCloud(audit: AuditRecord, project: WaterProj
  * and syncs on tab focus / window visibility change and BroadcastChannel
  */
 export function startRealtimeCloudSync(
-  onUpdate: (data: { audits: AuditRecord[]; projects: WaterProject[]; repairs: RepairItem[]; newCount: number }) => void,
+  onUpdate: (data: { 
+    audits: AuditRecord[]; 
+    projects: WaterProject[]; 
+    repairs: RepairItem[]; 
+    geoHierarchy: CountryInfo[];
+    masterHeads: MasterHeadsConfig;
+    newCount: number;
+    geoUpdated?: boolean;
+  }) => void,
   userId: string = 'FGRF-HQ-01'
 ): () => void {
   let isSyncing = false;
@@ -606,12 +697,15 @@ export function startRealtimeCloudSync(
     try {
       const res = await syncAllWithCloud(userId);
       lastSyncTimestamp = Date.now();
-      if (res.success && (res.newAuditsCount > 0 || res.newProjectsCount > 0)) {
+      if (res.success && (res.newAuditsCount > 0 || res.newProjectsCount > 0 || res.geoUpdated)) {
         onUpdate({
           audits: getAudits(),
           projects: getProjects(),
           repairs: getRepairs(),
-          newCount: res.newAuditsCount
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: getMasterHeads(),
+          newCount: res.newAuditsCount,
+          geoUpdated: res.geoUpdated
         });
       }
     } catch (err) {
@@ -621,46 +715,52 @@ export function startRealtimeCloudSync(
     }
   };
 
-  // Run initial sync after 3 seconds
-  const initialTimer = setTimeout(triggerSync, 3000);
+  // Run initial sync after 2 seconds
+  const initialTimer = setTimeout(triggerSync, 2000);
 
   // Poll cloud every 3 minutes (180,000ms) - preserves API quota for multi-location users
   const interval = setInterval(triggerSync, 180000);
 
-  // Sync on tab focus / window visibility change (if > 2 minutes since last sync)
+  // Sync on tab focus / window visibility change (if > 1 minute since last sync)
   const handleVisibilityOrFocus = () => {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 120000) {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 60000) {
       triggerSync();
     }
   };
 
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+  }
   if (typeof window !== 'undefined') {
-    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('focus', handleVisibilityOrFocus);
   }
 
-  // Listen to cross-tab updates
-  const handleBusMessage = (e: MessageEvent) => {
-    if (e.data?.type === 'DATA_SYNCED') {
+  // Cross-tab broadcast listener
+  const handleBroadcast = (event: MessageEvent) => {
+    if (event.data?.type === 'DATA_SYNCED' || event.data?.type === 'GEO_SYNCED' || event.data?.type === 'HEADS_SYNCED') {
       onUpdate({
         audits: getAudits(),
         projects: getProjects(),
         repairs: getRepairs(),
-        newCount: 0
+        geoHierarchy: getGeoHierarchy(),
+        masterHeads: getMasterHeads(),
+        newCount: 0,
+        geoUpdated: event.data?.type === 'GEO_SYNCED'
       });
     }
   };
 
-  syncBus?.addEventListener('message', handleBusMessage);
+  syncBus?.addEventListener('message', handleBroadcast);
 
-  // Cleanup function
   return () => {
     clearTimeout(initialTimer);
     clearInterval(interval);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    }
     if (typeof window !== 'undefined') {
-      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
     }
-    syncBus?.removeEventListener('message', handleBusMessage);
+    syncBus?.removeEventListener('message', handleBroadcast);
   };
 }

@@ -67,9 +67,14 @@ app.post('/api/cloud-sync', (req, res) => {
     else mergedRepairs.unshift(r);
   }
   const updated = {
+    system: "Faizan Global Relief Foundation (FGRF) - Water Projects Audit & Monitoring System",
+    formReference: "FGRF-WTS-AUD-002.00-26",
+    architect: "Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF)",
     audits: mergedAudits,
     projects: mergedProjects,
     repairs: mergedRepairs,
+    geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || undefined,
+    masterHeads: incoming.masterHeads || current.masterHeads || undefined,
     lastUpdated: new Date().toISOString(),
     updatedBy: incoming.updatedBy || 'FGRF-HQ'
   };

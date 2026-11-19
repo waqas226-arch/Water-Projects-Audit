@@ -1,6 +1,6 @@
 import { AuditRecord, WaterProject, RepairItem, UserProfile, AppNotification, UserActivityLog, MasterHeadsConfig, MasterHeadOption, MasterQuestionHead } from '../types/index.ts';
 import { PRECONFIGURED_USERS, INITIAL_CHECKPOINTS, createDefaultCheckpoints, evaluateOverallConditionFromCheckpoints } from './auditLogic.ts';
-import { GLOBAL_COUNTRIES, CountryInfo } from './pakistanGeo.ts';
+import { GLOBAL_COUNTRIES, CountryInfo, mergeGeoHierarchy } from './pakistanGeo.ts';
 
 const STORAGE_KEYS = {
   PROJECTS: 'fgrf_wts_projects_v2',
@@ -759,7 +759,9 @@ export function getGeoHierarchy(): CountryInfo[] {
       safeStorage.setItem(STORAGE_KEYS.GEO_HIERARCHY, JSON.stringify(GLOBAL_COUNTRIES));
       return GLOBAL_COUNTRIES;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const merged = mergeGeoHierarchy(GLOBAL_COUNTRIES, parsed);
+    return merged;
   } catch {
     return GLOBAL_COUNTRIES;
   }

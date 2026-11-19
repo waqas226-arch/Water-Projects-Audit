@@ -14,6 +14,7 @@ import {
   getProjects, 
   getRepairs, 
   getUsers,
+  getGeoHierarchy,
   createUser,
   updateUser,
   deleteUser,
@@ -28,6 +29,7 @@ import {
   setCurrentUser, 
   submitNewAudit 
 } from './utils/storage.ts';
+import { CountryInfo } from './utils/pakistanGeo.ts';
 import { Sidebar, NavTab } from './components/Sidebar.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { DashboardView } from './components/DashboardView.tsx';
@@ -62,6 +64,7 @@ export default function App() {
   const [projects, setProjects] = useState<WaterProject[]>(getProjects());
   const [audits, setAudits] = useState<AuditRecord[]>(getAudits());
   const [repairs, setRepairs] = useState<RepairItem[]>(getRepairs());
+  const [geoHierarchy, setGeoHierarchy] = useState<CountryInfo[]>(() => getGeoHierarchy());
   const [notifications, setNotifications] = useState<AppNotification[]>(getNotifications());
   const [showHeaderNotifications, setShowHeaderNotifications] = useState<boolean>(false);
   const unreadNotificationsCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
@@ -104,9 +107,14 @@ export default function App() {
       setAudits(payload.audits);
       setProjects(payload.projects);
       setRepairs(payload.repairs);
+      if (payload.geoHierarchy) {
+        setGeoHierarchy(payload.geoHierarchy);
+      }
       setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       if (payload.newCount > 0) {
         showToast(`🔄 Real-time Cloud Sync: Received ${payload.newCount} new inspection record(s) from field staff!`);
+      } else if (payload.geoUpdated) {
+        showToast(`📍 Geographical locations updated from Cloud Master DB!`);
       }
     }, currentUser.id);
 
@@ -123,6 +131,7 @@ export default function App() {
       setAudits(getAudits());
       setProjects(getProjects());
       setRepairs(getRepairs());
+      setGeoHierarchy(getGeoHierarchy());
       setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       showToast(res.message);
     } catch {
@@ -633,6 +642,7 @@ export default function App() {
           <ProjectDirectoryView
             projects={projects}
             currentUser={currentUser}
+            geoHierarchy={geoHierarchy}
             onAddProject={handleAddProject}
             onBulkImportProjects={handleBulkImport}
             onSelectProjectForAudit={handleAuditForProject}
@@ -645,6 +655,7 @@ export default function App() {
           <AuditFormView
             currentUser={currentUser}
             projects={projects}
+            geoHierarchy={geoHierarchy}
             onSubmitAudit={handleSubmitAudit}
             preselectedProjectId={preselectedAuditProjectId}
             onCancel={() => {
@@ -696,7 +707,11 @@ export default function App() {
         )}
 
         {currentTab === 'open_heads' && (
-          <OpenHeadsView currentUser={currentUser} showToast={showToast} />
+          <OpenHeadsView 
+            currentUser={currentUser} 
+            showToast={showToast} 
+            onRefreshGeo={() => setGeoHierarchy(getGeoHierarchy())}
+          />
         )}
 
         {currentTab === 'activity_logs' && (
