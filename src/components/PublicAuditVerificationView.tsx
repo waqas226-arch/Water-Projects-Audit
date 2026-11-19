@@ -62,12 +62,11 @@ export const PublicAuditVerificationView: React.FC<PublicAuditVerificationViewPr
         return;
       }
 
-      // 3. Check official preconfigured master registry (e.g. AUD-2026-0001)
+      // 3. Check official preconfigured master registry
       if (OFFICIAL_PRECONFIGURED_AUDITS[cleanTargetId]) {
         const officialMatch = OFFICIAL_PRECONFIGURED_AUDITS[cleanTargetId];
         if (isMounted) {
           setAudit(officialMatch);
-          try { submitNewAudit(officialMatch); } catch {}
           setLoading(false);
           return;
         }

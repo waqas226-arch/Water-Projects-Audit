@@ -1,7 +1,6 @@
 import { AuditRecord, WaterProject, RepairItem, UserProfile, AppNotification, UserActivityLog, MasterHeadsConfig, MasterHeadOption, MasterQuestionHead } from '../types/index.ts';
 import { PRECONFIGURED_USERS, INITIAL_CHECKPOINTS, createDefaultCheckpoints, evaluateOverallConditionFromCheckpoints } from './auditLogic.ts';
 import { GLOBAL_COUNTRIES, CountryInfo } from './pakistanGeo.ts';
-import { OFFICIAL_PRECONFIGURED_AUDITS } from './auditPayload.ts';
 
 const STORAGE_KEYS = {
   PROJECTS: 'fgrf_wts_projects_v2',
@@ -43,46 +42,77 @@ const safeStorage = {
   }
 };
 
-// Production-ready initial states with verified master registry
-export const SEED_PROJECTS: WaterProject[] = [
-  {
-    id: 'FGRF-WTS-SND-004',
-    name: 'Haji Qasim Brohi Hand Pump',
-    province: 'Sindh',
-    division: 'Mirpurkhas',
-    district: 'Badin',
-    tehsil: 'Matli',
-    unionCouncil: 'UC-03 Matli Rural',
-    village: 'Haji Qasim Brohi',
-    installationType: 'Hand Pump',
-    installationDate: '2024-03-15',
-    beneficiaryName: 'Ghulam Mustafa',
-    beneficiaryMobile: '+92 300 1234567',
-    gpsCoordinates: { lat: 25.0421, lng: 68.6512 },
-    currentCondition: 'Functional',
-    lastInspectionDate: '2026-11-14',
-    totalInspections: 1,
-    status: 'Active'
-  }
-];
+// Production-ready initial states - 100% clean registries (Zero fake/demo data)
+export const SEED_PROJECTS: WaterProject[] = [];
 export const SEED_REPAIRS: RepairItem[] = [];
-export const SEED_AUDITS: AuditRecord[] = [
-  OFFICIAL_PRECONFIGURED_AUDITS['aud-2026-0001']
-];
+export const SEED_AUDITS: AuditRecord[] = [];
 export const SEED_NOTIFICATIONS: AppNotification[] = [];
 
-const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v4';
+const STORAGE_CLEARED_FLAG = 'fgrf_wts_cleared_ready_v6';
 
 export function ensureDemoDataCleared(): void {
   try {
-    const isCleared = safeStorage.getItem(STORAGE_CLEARED_FLAG);
-    if (!isCleared) {
-      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
-      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
-      safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify([]));
-      safeStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
-      safeStorage.setItem(STORAGE_CLEARED_FLAG, 'true');
+    // 1. Permanently ban legacy demo and fake IDs
+    markAuditAsDeleted('AUD-2026-0001');
+    markAuditAsDeleted('TEST-001');
+    markProjectAsDeleted('FGRF-WTS-SND-004');
+
+    // 2. Remove fake project and audit from localStorage immediately if present
+    const rawProjects = safeStorage.getItem(STORAGE_KEYS.PROJECTS);
+    if (rawProjects) {
+      try {
+        const parsedProjects = JSON.parse(rawProjects);
+        if (Array.isArray(parsedProjects)) {
+          const cleanProjects = parsedProjects.filter(
+            (p) =>
+              p &&
+              p.id &&
+              String(p.id).trim().toUpperCase() !== 'FGRF-WTS-SND-004' &&
+              !String(p.name || '').includes('Haji Qasim Brohi')
+          );
+          safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(cleanProjects));
+        }
+      } catch {}
+    } else {
+      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify([]));
     }
+
+    const rawAudits = safeStorage.getItem(STORAGE_KEYS.AUDITS);
+    if (rawAudits) {
+      try {
+        const parsedAudits = JSON.parse(rawAudits);
+        if (Array.isArray(parsedAudits)) {
+          const cleanAudits = parsedAudits.filter(
+            (a) =>
+              a &&
+              a.id &&
+              a.id !== 'TEST-001' &&
+              String(a.id).trim().toUpperCase() !== 'AUD-2026-0001' &&
+              String(a.projectId || '').trim().toUpperCase() !== 'FGRF-WTS-SND-004'
+          );
+          safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(cleanAudits));
+        }
+      } catch {}
+    } else {
+      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify([]));
+    }
+
+    const rawRepairs = safeStorage.getItem(STORAGE_KEYS.REPAIRS);
+    if (rawRepairs) {
+      try {
+        const parsedRepairs = JSON.parse(rawRepairs);
+        if (Array.isArray(parsedRepairs)) {
+          const cleanRepairs = parsedRepairs.filter(
+            (r) => r && r.id && String(r.id).trim().toUpperCase() !== 'REP-2026-0001'
+          );
+          safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify(cleanRepairs));
+        }
+      } catch {}
+    } else {
+      safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify([]));
+    }
+
+    safeStorage.setItem(STORAGE_CLEARED_FLAG, 'true');
   } catch (e) {
     console.error('Error clearing demo data:', e);
   }
@@ -98,11 +128,12 @@ ensureDemoDataCleared();
 export function getDeletedAuditIds(): string[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_AUDITS);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map((id: string) => String(id).trim().toUpperCase()) : [];
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes('AUD-2026-0001')) list.push('AUD-2026-0001');
+    if (!list.includes('TEST-001')) list.push('TEST-001');
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : ['AUD-2026-0001', 'TEST-001'];
   } catch {
-    return [];
+    return ['AUD-2026-0001', 'TEST-001'];
   }
 }
 
@@ -118,11 +149,11 @@ export function markAuditAsDeleted(auditId: string): void {
 export function getDeletedProjectIds(): string[] {
   try {
     const raw = safeStorage.getItem(STORAGE_KEYS.DELETED_PROJECTS);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map((id: string) => String(id).trim().toUpperCase()) : [];
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes('FGRF-WTS-SND-004')) list.push('FGRF-WTS-SND-004');
+    return Array.isArray(list) ? list.map((id: string) => String(id).trim().toUpperCase()) : ['FGRF-WTS-SND-004'];
   } catch {
-    return [];
+    return ['FGRF-WTS-SND-004'];
   }
 }
 
@@ -142,17 +173,29 @@ export function getProjects(): WaterProject[] {
 
     // Fresh initialization only if storage key never existed
     if (raw === null) {
-      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
-      return SEED_PROJECTS.filter((p) => !deletedIds.includes(p.id.trim().toUpperCase()));
+      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify([]));
+      return [];
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    // Filter out deleted projects
-    return parsed.filter(
-      (p) => p && typeof p === 'object' && p.id && !deletedIds.includes(String(p.id).trim().toUpperCase())
+    // Filter out deleted projects and any demo projects
+    const cleanList = parsed.filter(
+      (p) =>
+        p &&
+        typeof p === 'object' &&
+        p.id &&
+        String(p.id).trim().toUpperCase() !== 'FGRF-WTS-SND-004' &&
+        !String(p.name || '').includes('Haji Qasim Brohi') &&
+        !deletedIds.includes(String(p.id).trim().toUpperCase())
     );
+
+    if (cleanList.length !== parsed.length) {
+      safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(cleanList));
+    }
+
+    return cleanList;
   } catch {
     return [];
   }
@@ -169,14 +212,14 @@ export function getAudits(): AuditRecord[] {
 
     // Fresh initialization only if storage key never existed
     if (raw === null) {
-      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
-      return SEED_AUDITS.filter((a) => !deletedIds.includes(a.id.trim().toUpperCase()));
+      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify([]));
+      return [];
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    // Filter out deleted audits
+    // Filter out deleted audits and fake demo audits
     const cleanList = parsed
       .filter(
         (a) =>
@@ -184,6 +227,8 @@ export function getAudits(): AuditRecord[] {
           typeof a === 'object' &&
           a.id &&
           a.id !== 'TEST-001' &&
+          String(a.id).trim().toUpperCase() !== 'AUD-2026-0001' &&
+          String(a.projectId || '').trim().toUpperCase() !== 'FGRF-WTS-SND-004' &&
           !deletedIds.includes(String(a.id).trim().toUpperCase())
       )
       .map((a) => ({
@@ -194,6 +239,10 @@ export function getAudits(): AuditRecord[] {
         approvalStatus: a.approvalStatus || 'Submitted',
         inspectionDateTime: a.inspectionDateTime || new Date().toISOString(),
       }));
+
+    if (cleanList.length !== parsed.length) {
+      safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(cleanList));
+    }
 
     return cleanList;
   } catch {
@@ -308,12 +357,15 @@ export function saveNotifications(notifs: AppNotification[]): void {
 }
 
 export function resetToSeedData(): void {
-  safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(SEED_PROJECTS));
-  safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(SEED_AUDITS));
-  safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify(SEED_REPAIRS));
+  safeStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify([]));
+  safeStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify([]));
+  safeStorage.setItem(STORAGE_KEYS.REPAIRS, JSON.stringify([]));
   safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(PRECONFIGURED_USERS));
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(PRECONFIGURED_USERS[0]));
-  safeStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(SEED_NOTIFICATIONS));
+  safeStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
+  markAuditAsDeleted('AUD-2026-0001');
+  markAuditAsDeleted('TEST-001');
+  markProjectAsDeleted('FGRF-WTS-SND-004');
 }
 
 export function submitNewAudit(audit: AuditRecord): { audit: AuditRecord; updatedProject: WaterProject } {
@@ -583,48 +635,15 @@ export async function detectClientIp(): Promise<string> {
 export const SEED_ACTIVITY_LOGS: UserActivityLog[] = [
   {
     id: 'LOG-001',
-    timestamp: '2026-11-11T09:15:20.000Z',
+    timestamp: '2026-11-19T08:00:00.000Z',
     userId: 'FGRF-MIS-01',
     userName: 'Syed Waqas',
-    userRole: 'Super Admin (HQ)',
-    ipAddress: '192.168.1.105 (MIS Local Station)',
+    userRole: 'Manager MIS',
+    ipAddress: 'Head Office (Official Station)',
     actionType: 'LOGIN',
-    actionDescription: 'User successfully logged in to Water Audit System',
-    details: 'Authenticated from Data Management & ERP Department workstation',
-  },
-  {
-    id: 'LOG-002',
-    timestamp: '2026-11-11T09:45:10.000Z',
-    userId: 'FGRF-INS-101',
-    userName: 'Zubair Raza',
-    userRole: 'Senior Field Inspector',
-    ipAddress: '119.160.118.45 (Cellular Data)',
-    actionType: 'AUDIT_CREATE',
-    actionDescription: 'Generated Auto Audit Code AUD-2026-0001 & Created Verification QR Code',
-    details: 'Project FGRF-WTS-SND-004 (Badin). Evaluated Condition: Functional',
-  },
-  {
-    id: 'LOG-003',
-    timestamp: '2026-11-11T10:12:00.000Z',
-    userId: 'FGRF-HQ-01',
-    userName: 'Muhammad Farooq Attari',
-    userRole: 'Head of Audit & Monitoring',
-    ipAddress: '39.40.12.98 (Head Office HQ)',
-    actionType: 'AUDIT_APPROVE',
-    actionDescription: 'Approved Audit Report AUD-2026-0001',
-    details: 'Marked report status as Approved with verification sign-off',
-  },
-  {
-    id: 'LOG-004',
-    timestamp: '2026-11-11T11:05:40.000Z',
-    userId: 'FGRF-MIS-01',
-    userName: 'Syed Waqas',
-    userRole: 'Super Admin (HQ)',
-    ipAddress: '192.168.1.105 (MIS Local Station)',
-    actionType: 'PROJECT_UPDATE',
-    actionDescription: 'Updated Project Master Database for FGRF-WTS-KHI-001',
-    details: 'Updated functional status, apron verification, and beneficiary contact details',
-  },
+    actionDescription: 'Central ERP & Water Projects Audit Portal Initialized',
+    details: 'System online with clean master registry under reference FGRF-WTS-AUD-002.00-26.',
+  }
 ];
 
 export function getActivityLogs(): UserActivityLog[] {
@@ -634,7 +653,13 @@ export function getActivityLogs(): UserActivityLog[] {
       safeStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(SEED_ACTIVITY_LOGS));
       return SEED_ACTIVITY_LOGS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return SEED_ACTIVITY_LOGS;
+    return parsed.filter(
+      (l) =>
+        !String(l.actionDescription || '').includes('AUD-2026-0001') &&
+        !String(l.details || '').includes('FGRF-WTS-SND-004')
+    );
   } catch {
     return SEED_ACTIVITY_LOGS;
   }

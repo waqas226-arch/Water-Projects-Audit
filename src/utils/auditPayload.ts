@@ -204,71 +204,7 @@ export function decodeAuditFromQr(payloadStr: string): AuditRecord | null {
 }
 
 /**
- * Pre-registered Official Registry of Master FGRF Audit Certificates
- * Ensures legacy QR codes (which only encode `?view_audit=AUD-2026-0001`)
- * immediately resolve without needing an external cloud database or previous local cache.
+ * Production Master Registry of Pre-registered Audit Certificates
+ * Initialized clean for official live operational deployment.
  */
-export const OFFICIAL_PRECONFIGURED_AUDITS: Record<string, AuditRecord> = {
-  'aud-2026-0001': {
-    id: 'AUD-2026-0001',
-    formReference: 'FGRF-WTS-AUD-002.00-26',
-    projectId: 'FGRF-WTS-SND-004',
-    country: 'Pakistan',
-    province: 'Sindh',
-    division: 'Mirpurkhas',
-    district: 'Badin',
-    tehsil: 'Matli',
-    unionCouncil: 'UC-03 Matli Rural',
-    village: 'Haji Qasim Brohi',
-    fullSiteAddress: 'Near Jamia Masjid Faizan-e-Madina, Deh Matli, District Badin, Sindh',
-    gpsCoordinates: { lat: 25.0421, lng: 68.6512 },
-    beneficiaryName: 'Ghulam Mustafa (Village Head)',
-    beneficiaryMobile: '+92 300 1234567',
-    installationType: 'Hand Pump (Indus-01 Heavy Duty)',
-    installationDate: '2024-03-15',
-    inspectionDateTime: '2026-11-14T11:45:00.000Z',
-    inspectorId: 'FGRF-INS-101',
-    inspectorName: 'Syed Waqas',
-    inspectorDesignation: 'Manager MIS (Data Management & ERP)',
-    checkpoints: createDefaultCheckpoints().map(cp => {
-      if (cp.id === 1) return { ...cp, currentStatus: 'Yes', remarks: 'Water discharge rate verified at 22 Liters/minute (Optimum).' };
-      if (cp.id === 2) return { ...cp, currentStatus: 'Yes', remarks: 'Platform apron concrete fully intact without cracks or stagnant water.' };
-      if (cp.id === 3) return { ...cp, currentStatus: 'Yes', remarks: 'Drainage channel flowing smoothly to 4-meter soak pit.' };
-      if (cp.id === 4) return { ...cp, currentStatus: 'OK', remarks: 'Clear and transparent water output, zero odor or turbidity.' };
-      if (cp.id === 5) return { ...cp, currentStatus: 'Yes', remarks: 'Mechanical handle and fulcrum pin in smooth working order.' };
-      if (cp.id === 6) return { ...cp, currentStatus: 'Yes', remarks: 'Heavy duty cylinder seal and leather bucket fully functional.' };
-      if (cp.id === 7) return { ...cp, currentStatus: 'Yes', remarks: 'Pump base foundation bolts firmly secured.' };
-      if (cp.id === 8) return { ...cp, currentStatus: 'Yes', remarks: 'Surrounding hygiene satisfactory; livestock fencing maintained.' };
-      if (cp.id === 9) return { ...cp, currentStatus: 'Yes', remarks: 'Official FGRF donor memorial metal plaque clearly mounted and readable.' };
-      if (cp.id === 10) return { ...cp, currentStatus: 'Yes', remarks: '3-Member Village Water Committee active and trained on basic maintenance.' };
-      if (cp.id === 11) return { ...cp, currentStatus: 'Yes', remarks: 'GPS geo-coordinates confirmed on site with digital positioning.' };
-      if (cp.id === 12) return { ...cp, currentStatus: 'Yes', remarks: 'Beneficiary satisfaction confirmed by community members.' };
-      return cp;
-    }),
-    repairs: [
-      {
-        id: 'REP-2026-0001',
-        defectFound: 'Preventative Handle Bush Lubrication & Seal Inspection',
-        repairRequired: 'Applied food-grade mechanical grease and tightened pivot bolt locknut',
-        status: 'Done',
-        responsiblePerson: 'Zubair Raza (Technical Supervisor)',
-        targetDate: '2026-11-14'
-      }
-    ],
-    overallCondition: 'Functional',
-    attachedPhotos: {
-      siteOverview: 'OFFICIAL_VERIFIED_PHOTO_SITE_OVERVIEW',
-      beforeDefect: 'OFFICIAL_VERIFIED_PHOTO_BEFORE_DEFECT',
-      afterRepair: 'OFFICIAL_VERIFIED_PHOTO_AFTER_REPAIR'
-    },
-    inspectorRemarks: 'Site inspected thoroughly. Hand pump water yield and structural apron meet FGRF humanitarian standards. Certified operational.',
-    inspectorSignature: 'VERIFIED_DIGITAL_STAMP_SYED_WAQAS',
-    inspectionSignDate: '2026-11-14',
-    communityRepName: 'Muhammad Siddique Attari',
-    communityRepSignature: 'VERIFIED_DIGITAL_STAMP_COMMUNITY_REP',
-    communityRepDate: '2026-11-14',
-    approvalStatus: 'Approved',
-    createdAt: '2026-11-14T11:45:00.000Z',
-    updatedAt: '2026-11-14T11:45:00.000Z'
-  }
-};
+export const OFFICIAL_PRECONFIGURED_AUDITS: Record<string, AuditRecord> = {};

@@ -140,7 +140,10 @@ export interface SyncResult {
 export function sanitizeAuditRecord(raw: any): AuditRecord | null {
   if (!raw || typeof raw !== 'object') return null;
   const id = raw.id ? String(raw.id).trim() : '';
-  if (!id || id === 'TEST-001') return null;
+  const idUpper = id.toUpperCase();
+  if (!id || idUpper === 'TEST-001' || idUpper === 'AUD-2026-0001') return null;
+  const projUpper = String(raw.projectId || raw.project || '').trim().toUpperCase();
+  if (projUpper === 'FGRF-WTS-SND-004') return null;
 
   return {
     id,
@@ -274,8 +277,18 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
 
       return {
         audits: cleanAudits,
-        projects: Array.isArray(data.projects) ? data.projects.filter((p) => p && p.id) : [],
-        repairs: Array.isArray(data.repairs) ? data.repairs.filter((r) => r && r.id) : [],
+        projects: Array.isArray(data.projects)
+          ? data.projects.filter(
+              (p) =>
+                p &&
+                p.id &&
+                String(p.id).trim().toUpperCase() !== 'FGRF-WTS-SND-004' &&
+                !String(p.name || '').includes('Haji Qasim Brohi')
+            )
+          : [],
+        repairs: Array.isArray(data.repairs)
+          ? data.repairs.filter((r) => r && r.id && String(r.id).trim().toUpperCase() !== 'REP-2026-0001')
+          : [],
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         updatedBy: data.updatedBy
       };
@@ -475,6 +488,8 @@ export function mergeProjects(local: WaterProject[], remote: WaterProject[]): { 
   let newCount = 0;
   remote.forEach((remoteProj) => {
     if (!remoteProj || !remoteProj.id) return;
+    const cleanId = String(remoteProj.id).trim().toUpperCase();
+    if (cleanId === 'FGRF-WTS-SND-004' || String(remoteProj.name || '').includes('Haji Qasim Brohi')) return;
 
     // Never re-import a project that was explicitly deleted locally
     if (deletedIds.includes(remoteProj.id.trim().toUpperCase())) return;
