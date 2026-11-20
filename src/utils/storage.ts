@@ -20,11 +20,20 @@ const STORAGE_KEYS = {
 
 const memoryStorage: Record<string, string> = {};
 
+function getStorageBackend() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+    if (typeof globalThis !== 'undefined' && (globalThis as any).localStorage) return (globalThis as any).localStorage;
+  } catch {}
+  return null;
+}
+
 const safeStorage = {
   getItem: (key: string): string | null => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const val = window.localStorage.getItem(key);
+      const backend = getStorageBackend();
+      if (backend) {
+        const val = backend.getItem(key);
         if (val !== null) return val;
       }
     } catch {
@@ -34,13 +43,25 @@ const safeStorage = {
   },
   setItem: (key: string, value: string): void => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, value);
+      const backend = getStorageBackend();
+      if (backend) {
+        backend.setItem(key, value);
       }
     } catch {
       // file:// protocol or private browsing
     }
     memoryStorage[key] = value;
+  },
+  removeItem: (key: string): void => {
+    try {
+      const backend = getStorageBackend();
+      if (backend) {
+        backend.removeItem(key);
+      }
+    } catch {
+      // file:// protocol or private browsing
+    }
+    delete memoryStorage[key];
   }
 };
 
@@ -150,6 +171,12 @@ export function ensureDemoDataCleared(): void {
     } else {
       safeStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(PRECONFIGURED_USERS));
     }
+
+    // 6. Purge any stale legacy cloud sync endpoints or settings
+    try {
+      safeStorage.removeItem('fgrf_cloud_sync_custom_endpoint');
+      safeStorage.removeItem('fgrf_cloud_sync_github_token');
+    } catch {}
 
     safeStorage.setItem(STORAGE_CLEARED_FLAG, 'true');
   } catch (e) {

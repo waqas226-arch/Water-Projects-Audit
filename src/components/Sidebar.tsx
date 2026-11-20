@@ -21,7 +21,6 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
-  Settings,
   Sparkles,
   Video
 } from 'lucide-react';
@@ -36,7 +35,6 @@ interface SidebarProps {
   currentUser: UserProfile;
   notifications: AppNotification[];
   onMarkNotificationRead: (id: string) => void;
-  onOpenSettings: () => void;
   onOpenVideoTutorial?: () => void;
   onLogout: () => void;
   isCollapsed: boolean;
@@ -51,7 +49,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   notifications,
   onMarkNotificationRead,
-  onOpenSettings,
   onOpenVideoTutorial,
   onLogout,
   isCollapsed,
@@ -173,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* ====================================================================== */}
-        {/* TOP PROFILE CARD, SETTINGS OPTION & LOG OFF                            */}
+        {/* TOP PROFILE CARD, ALERTS & LOG OFF                                     */}
         {/* ====================================================================== */}
         <div className={`border-b border-slate-800/80 p-3 bg-slate-900/40 transition-all ${isCollapsed ? 'text-center' : ''}`}>
           {!isCollapsed ? (
@@ -191,30 +188,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               </div>
 
-              {/* Quick Action Buttons: Profile/Settings, Notifications, Log Off */}
-              <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-800/60 text-xs">
-                {/* Settings / Change Password button */}
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-emerald-900/60 hover:text-emerald-200 text-slate-300 rounded-lg text-[11px] font-semibold transition-all border border-slate-700/80 cursor-pointer flex-1 justify-center"
-                  title="Profile Settings & Change Password / ترتیبات اور پاس ورڈ تبدیلی"
-                >
-                  <Settings className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Settings</span>
-                </button>
-
+              {/* Quick Action Buttons: Notifications & Log Off */}
+              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800/60 text-xs">
                 {/* Notifications Bell */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700/80 relative cursor-pointer"
-                    title="Notifications"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700/80 relative cursor-pointer"
+                    title="Notifications / انتباہات"
                   >
-                    <Bell className="w-3.5 h-3.5" />
+                    <Bell className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[11px] font-semibold hidden sm:inline">Alerts</span>
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
+                      <span className="w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
                         {unreadCount}
                       </span>
                     )}
@@ -287,7 +274,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 hover:text-white rounded-lg text-[11px] font-semibold transition-all border border-rose-800/60 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 hover:text-white rounded-lg text-[11px] font-semibold transition-all border border-rose-800/60 cursor-pointer flex-1 justify-center"
                   title="Log Off System / لاگ آؤٹ"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -298,14 +285,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             /* Collapsed Profile Icon & Buttons */
             <div className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-extrabold flex items-center justify-center text-xs shadow-md border border-emerald-400/30 hover:scale-105 transition-transform cursor-pointer"
-                title={`${currentUser.name} (${currentUser.id}) - Click for Settings`}
+              <div
+                className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-extrabold flex items-center justify-center text-xs shadow-md border border-emerald-400/30 select-none"
+                title={`${currentUser.name} (${currentUser.id})`}
               >
                 {currentUser.name.slice(0, 2).toUpperCase()}
-              </button>
+              </div>
 
               <div className="flex flex-col gap-1 w-full items-center pt-1 border-t border-slate-800">
                 {/* Collapsed Mode Notifications Bell */}
@@ -384,14 +369,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="p-2 rounded-lg text-slate-400 hover:text-emerald-300 hover:bg-slate-800 cursor-pointer"
-                  title="Settings & Change Password"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
                 <button
                   type="button"
                   onClick={onLogout}

@@ -31,7 +31,6 @@ import {
 } from './utils/storage.ts';
 import { CountryInfo } from './utils/pakistanGeo.ts';
 import { Sidebar, NavTab } from './components/Sidebar.tsx';
-import { SettingsModal } from './components/SettingsModal.tsx';
 import { DashboardView } from './components/DashboardView.tsx';
 import { AuditFormView } from './components/AuditFormView.tsx';
 import { ProjectDirectoryView } from './components/ProjectDirectoryView.tsx';
@@ -48,7 +47,6 @@ import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
 import { PublicAuditVerificationView } from './components/PublicAuditVerificationView.tsx';
 import { VideoTutorialModal } from './components/VideoTutorialModal.tsx';
-import { CloudMasterDbModal } from './components/CloudMasterDbModal.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
@@ -79,10 +77,9 @@ export default function App() {
     }
   });
 
-  // Sidebar & Settings states
+  // Sidebar states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
 
   // Guard active tab against unauthorized access based on user rights
   useEffect(() => {
@@ -100,7 +97,6 @@ export default function App() {
 
   // Cloud Sync state
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
-  const [isCloudModalOpen, setIsCloudModalOpen] = useState<boolean>(false);
   const [lastSyncDisplay, setLastSyncDisplay] = useState<string>('Live Connected');
 
   // Real-Time Cloud Master Database Live Sync (Multi-location field staff <-> HQ Super Admin)
@@ -432,7 +428,6 @@ export default function App() {
         currentUser={currentUser}
         notifications={notifications}
         onMarkNotificationRead={handleMarkNotificationRead}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenVideoTutorial={() => setIsVideoTutorialModalOpen(true)}
         onLogout={() => {
           try {
@@ -476,30 +471,28 @@ export default function App() {
             </div>
           </div>
 
-          {/* Top Right Quick Profile & Settings & Live Cloud Master DB */}
+          {/* Top Right Quick Profile & Live Master DB Status */}
           <div className="flex items-center gap-2">
-            {/* Live Cloud Master DB Real-time Sync Status & Manual Trigger */}
-            <div className="flex items-center rounded-xl bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-300 text-emerald-950 transition-colors text-xs font-bold shadow-2xs overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setIsCloudModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-emerald-200/50 transition-colors cursor-pointer"
-                title="Central Cloud Master Database - Multi-Device Live Sync / مرکزی کلاؤڈ ڈیٹا بیس سنک (Click to Open Control Center)"
+            {/* Live Master DB Status & Quick Refresh */}
+            <div className="flex items-center rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-bold shadow-2xs overflow-hidden">
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1.5 select-none"
+                title="Central Master Database - Real-Time Live Sync Active"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <Cloud className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden sm:inline">Cloud Master DB:</span>
+                <span className="hidden sm:inline">Master DB:</span>
                 <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
-              </button>
+              </div>
               <button
                 type="button"
                 onClick={handleManualCloudSync}
                 disabled={isCloudSyncing}
-                title="Quick Sync Now / فوری سنک کریں"
-                className="px-2 py-1.5 border-l border-emerald-300/80 hover:bg-emerald-200/60 transition-colors text-emerald-700 hover:text-emerald-900 cursor-pointer disabled:opacity-50"
+                title="Sync Master Database / فوری سنک کریں"
+                className="px-2.5 py-1.5 border-l border-emerald-300/80 hover:bg-emerald-200/60 transition-colors text-emerald-700 hover:text-emerald-900 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3 h-3 ${isCloudSyncing ? 'animate-spin' : ''}`} />
               </button>
@@ -624,18 +617,15 @@ export default function App() {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsSettingsModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors text-xs font-semibold cursor-pointer"
-              title="Profile Settings & Change Password / سیٹنگز"
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold select-none"
+              title={`Authorized Staff: ${currentUser.name} (${currentUser.id})`}
             >
               <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px]">
                 {currentUser.name.slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden sm:inline font-mono text-[11px] font-bold text-emerald-800">{currentUser.id}</span>
-              <span className="text-slate-500 text-xs">⚙️</span>
-            </button>
+            </div>
           </div>
         </header>
 
@@ -817,15 +807,6 @@ export default function App() {
       </footer>
       </div>
 
-      {/* Settings & Change Password Modal */}
-      <SettingsModal
-        currentUser={currentUser}
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        onUpdateUser={handleUpdateUser}
-        showToast={showToast}
-      />
-
       {/* Official 2-Page Printable Form Modal */}
       {activePrintAudit && (
         <PrintableAuditForm
@@ -852,23 +833,6 @@ export default function App() {
       <VideoTutorialModal
         isOpen={isVideoTutorialModalOpen}
         onClose={() => setIsVideoTutorialModalOpen(false)}
-      />
-
-      {/* Central Cloud Master DB Control Center Modal */}
-      <CloudMasterDbModal
-        isOpen={isCloudModalOpen}
-        onClose={() => setIsCloudModalOpen(false)}
-        currentUser={currentUser}
-        audits={audits}
-        projects={projects}
-        repairs={repairs}
-        onDataUpdated={() => {
-          setAudits(getAudits());
-          setProjects(getProjects());
-          setRepairs(getRepairs());
-          setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        }}
-        showToast={showToast}
       />
     </div>
   );

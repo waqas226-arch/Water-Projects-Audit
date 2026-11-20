@@ -13,7 +13,6 @@ import {
   X,
   ExternalLink,
   Trash2,
-  Settings,
   Check,
   Edit
 } from 'lucide-react';
