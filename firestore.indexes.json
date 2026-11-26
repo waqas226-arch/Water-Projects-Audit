@@ -1,0 +1,47 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "water_projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "province", "order": "ASCENDING" },
+        { "fieldPath": "district", "order": "ASCENDING" },
+        { "fieldPath": "currentCondition", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "audits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "inspectionDateTime", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "audits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "province", "order": "ASCENDING" },
+        { "fieldPath": "approvalStatus", "order": "ASCENDING" },
+        { "fieldPath": "inspectionDateTime", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "repairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "targetDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "activity_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

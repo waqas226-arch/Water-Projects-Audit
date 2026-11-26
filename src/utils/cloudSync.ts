@@ -2,9 +2,11 @@
  * Faizan Global Relief Foundation (FGRF) - Water Projects Audit System
  * Central Real-Time Cloud Master Database Synchronization Engine
  * 
- * Enables multi-user real-time synchronization between Field Inspectors across Pakistan
- * and Super Admin / HQ Management via cloud persistence.
+ * Seamlessly synchronizes operational records across multiple computers worldwide
+ * using Google Firebase Cloud Firestore (live WebSocket listeners) with automatic
+ * offline caching, conflict resolution, and local backend fallback.
  * 
+ * Form Reference: FGRF-WTS-AUD-002.00-26
  * Author: Syed Waqas, Manager MIS (Data Management & ERP Department - FGRF)
  */
 
@@ -33,148 +35,41 @@ import {
   getUsers,
   saveUsers
 } from './storage.ts';
+import { isFirebaseConfigured, getFirebaseServices } from '../firebase/config.ts';
+import { 
+  subscribeToRealtimeFirestore, 
+  submitAuditToFirestore, 
+  saveProjectToFirestore, 
+  deleteProjectFromFirestore,
+  deleteAuditFromFirestore,
+  updateRepairInFirestore,
+  saveMasterHeadsToFirestore,
+  saveGeoHierarchyToFirestore,
+  saveUserToFirestore,
+  deleteUserFromFirestore,
+  fetchAllCollectionsFromFirestore
+} from '../firebase/firestore.ts';
 
-// Authoritative official Master Database URLs
+// Authoritative official Master Database URLs for static fallback
 const GITHUB_RAW_MASTER_DB = 'https://raw.githubusercontent.com/waqas226-arch/Water-project-Audit/main/data/master_cloud_database.json';
 const GITHUB_PAGES_MASTER_DB = 'https://waqas226-arch.github.io/Water-project-Audit/data/master_cloud_database.json';
 
 const STORAGE_LAST_SYNC_KEY = 'fgrf_cloud_last_sync_timestamp';
 
-export const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
- * Faizan Global Relief Foundation (FGRF) - Water Projects Audit System
- * Central Real-Time Cloud Master Database Web App
- * 
- * Form Reference: FGRF-WTS-AUD-002.00-26
- * Author: Syed Waqas, Manager MIS (Data Management & ERP Department, FGRF)
- * 
- * Instructions:
- * 1. Open https://script.google.com and click "New project"
- * 2. Replace all code with this script
- * 3. Click "Deploy" > "New deployment"
- * 4. Under "Select type" click the gear icon and select "Web app"
- * 5. Set "Execute as": "Me"
- * 6. Set "Who has access": "Anyone"
- * 7. Click "Deploy", authorize access, and copy the Web app URL
- * 8. Paste your URL into the Cloud Master DB settings in the Water Audit portal!
- */
-
-function doGet(e) {
-  var prop = PropertiesService.getScriptProperties();
-  var raw = prop.getProperty("FGRF_MASTER_DB");
-  var payload = raw ? JSON.parse(raw) : {
-    audits: [],
-    projects: [],
-    repairs: [],
-    geoHierarchy: [],
-    masterHeads: null,
-    users: [],
-    lastUpdated: new Date().toISOString(),
-    updatedBy: "FGRF-Init"
-  };
-  
-  return ContentService.createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  var prop = PropertiesService.getScriptProperties();
-  try {
-    var incoming = JSON.parse(e.postData.contents);
-    var raw = prop.getProperty("FGRF_MASTER_DB");
-    var current = raw ? JSON.parse(raw) : { audits: [], projects: [], repairs: [], users: [] };
-    
-    // Merge Audits
-    var auditsMap = {};
-    (current.audits || []).forEach(function(a) { if (a && a.id) auditsMap[a.id] = a; });
-    (incoming.audits || []).forEach(function(a) {
-      if (a && a.id) {
-        if (!auditsMap[a.id]) {
-          auditsMap[a.id] = a;
-        } else {
-          var oldT = new Date(auditsMap[a.id].updatedAt || auditsMap[a.id].inspectionDateTime || 0).getTime();
-          var newT = new Date(a.updatedAt || a.inspectionDateTime || 0).getTime();
-          if (newT >= oldT) auditsMap[a.id] = a;
-        }
-      }
-    });
-
-    // Merge Projects
-    var projectsMap = {};
-    (current.projects || []).forEach(function(p) { if (p && p.id) projectsMap[p.id] = p; });
-    (incoming.projects || []).forEach(function(p) {
-      if (p && p.id) projectsMap[p.id] = Object.assign({}, projectsMap[p.id] || {}, p);
-    });
-
-    // Merge Repairs
-    var repairsMap = {};
-    (current.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
-    (incoming.repairs || []).forEach(function(r) { if (r && r.id) repairsMap[r.id] = r; });
-
-    // Merge Users
-    var usersMap = {};
-    (current.users || []).forEach(function(u) { if (u && u.id) usersMap[String(u.id).toUpperCase()] = u; });
-    (incoming.users || []).forEach(function(u) {
-      if (u && u.id) {
-        var key = String(u.id).toUpperCase();
-        usersMap[key] = Object.assign({}, usersMap[key] || {}, u);
-      }
-    });
-
-    // Merge Tombstones (Deleted Records Registry)
-    var delAuditsMap = {};
-    (current.deletedAuditIds || []).concat(incoming.deletedAuditIds || []).forEach(function(id) { if (id) delAuditsMap[String(id).toUpperCase()] = true; });
-    var delProjectsMap = {};
-    (current.deletedProjectIds || []).concat(incoming.deletedProjectIds || []).forEach(function(id) { if (id) delProjectsMap[String(id).toUpperCase()] = true; });
-    var delUsersMap = {};
-    (current.deletedUserIds || []).concat(incoming.deletedUserIds || []).forEach(function(id) { if (id) delUsersMap[String(id).toUpperCase()] = true; });
-    var delRepairsMap = {};
-    (current.deletedRepairIds || []).concat(incoming.deletedRepairIds || []).forEach(function(id) { if (id) delRepairsMap[String(id).toUpperCase()] = true; });
-
-    // Strictly purge any deleted records so they NEVER resurrect
-    Object.keys(auditsMap).forEach(function(id) { if (delAuditsMap[String(id).toUpperCase()]) delete auditsMap[id]; });
-    Object.keys(projectsMap).forEach(function(id) { if (delProjectsMap[String(id).toUpperCase()]) delete projectsMap[id]; });
-    Object.keys(usersMap).forEach(function(id) { if (delUsersMap[String(id).toUpperCase()]) delete usersMap[id]; });
-    Object.keys(repairsMap).forEach(function(id) { if (delRepairsMap[String(id).toUpperCase()]) delete repairsMap[id]; });
-
-    var merged = {
-      audits: Object.keys(auditsMap).map(function(k) { return auditsMap[k]; }),
-      projects: Object.keys(projectsMap).map(function(k) { return projectsMap[k]; }),
-      repairs: Object.keys(repairsMap).map(function(k) { return repairsMap[k]; }),
-      geoHierarchy: incoming.geoHierarchy || current.geoHierarchy || [],
-      masterHeads: incoming.masterHeads || current.masterHeads || null,
-      users: Object.keys(usersMap).map(function(k) { return usersMap[k]; }),
-      deletedAuditIds: Object.keys(delAuditsMap),
-      deletedProjectIds: Object.keys(delProjectsMap),
-      deletedUserIds: Object.keys(delUsersMap),
-      deletedRepairIds: Object.keys(delRepairsMap),
-      lastUpdated: new Date().toISOString(),
-      updatedBy: incoming.updatedBy || "Syed Waqas (FGRF-MIS-01)"
-    };
-
-    prop.setProperty("FGRF_MASTER_DB", JSON.stringify(merged));
-
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      auditsCount: merged.audits.length,
-      projectsCount: merged.projects.length,
-      usersCount: merged.users.length,
-      lastUpdated: merged.lastUpdated,
-      message: "Central Master Database updated successfully."
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-`;
-
 // BroadcastChannel for instant cross-tab live synchronization
 const syncBus = typeof window !== 'undefined' && 'BroadcastChannel' in window 
   ? new BroadcastChannel('fgrf_master_sync_bus') 
   : null;
+
+export type CloudEngineType = 'firebase' | 'local_server' | 'offline';
+
+export function getActiveCloudEngine(): CloudEngineType {
+  if (isFirebaseConfigured()) return 'firebase';
+  if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('github.io')) {
+    return 'local_server';
+  }
+  return 'offline';
+}
 
 export interface CloudDatabasePayload {
   audits: AuditRecord[];
@@ -193,6 +88,7 @@ export interface CloudDatabasePayload {
 
 export interface SyncResult {
   success: boolean;
+  engine: CloudEngineType;
   newAuditsCount: number;
   newProjectsCount: number;
   newUsersCount?: number;
@@ -251,27 +147,11 @@ export function sanitizeAuditRecord(raw: any): AuditRecord | null {
   };
 }
 
-export function getGitHubToken(): string {
-  return '';
-}
-
-export function setGitHubToken(_token: string): void {
-  try {
-    localStorage.removeItem('fgrf_cloud_sync_github_token');
-  } catch {}
-}
-
 export function getCloudSyncEndpoint(): string {
   if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('github.io')) {
     return `${window.location.origin}/api/cloud-sync`;
   }
   return '';
-}
-
-export function setCloudSyncEndpoint(_url: string): void {
-  try {
-    localStorage.removeItem('fgrf_cloud_sync_custom_endpoint');
-  } catch {}
 }
 
 export function getLastSyncTime(): string | null {
@@ -283,21 +163,39 @@ export function getLastSyncTime(): string | null {
 }
 
 /**
- * Fetch remote master database records from Cloud
+ * Fetch remote master database records (Firebase Firestore first, then fallback candidate endpoints).
  */
 export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
-  // Purge any stale legacy endpoints from localStorage
-  try {
-    localStorage.removeItem('fgrf_cloud_sync_custom_endpoint');
-    localStorage.removeItem('fgrf_cloud_sync_github_token');
-  } catch {}
+  // 1. If Firebase Cloud Firestore is configured, fetch live collections
+  if (isFirebaseConfigured()) {
+    try {
+      const fsData = await fetchAllCollectionsFromFirestore();
+      if (fsData) {
+        return {
+          audits: fsData.audits,
+          projects: fsData.projects,
+          repairs: fsData.repairs,
+          geoHierarchy: fsData.geo,
+          masterHeads: fsData.heads,
+          users: fsData.users,
+          deletedAuditIds: fsData.tombstones?.deletedAuditIds,
+          deletedProjectIds: fsData.tombstones?.deletedProjectIds,
+          deletedUserIds: fsData.tombstones?.deletedUserIds,
+          deletedRepairIds: fsData.tombstones?.deletedRepairIds,
+          lastUpdated: new Date().toISOString(),
+          updatedBy: 'Cloud Firestore',
+        };
+      }
+    } catch (e) {
+      console.warn('[CloudSync] Firestore fetch error, falling back:', e);
+    }
+  }
 
-  // List of official candidate endpoints in order:
+  // 2. Fallback to Local Node.js Express server or GitHub CDN
   const candidateEndpoints: string[] = [];
   if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('github.io')) {
     candidateEndpoints.push(`${window.location.origin}/api/cloud-sync`);
   }
-  // Official FGRF Master DB CDN & GitHub Pages
   candidateEndpoints.push(`${GITHUB_RAW_MASTER_DB}?t=${Date.now()}`);
   candidateEndpoints.push(`${GITHUB_PAGES_MASTER_DB}?t=${Date.now()}`);
 
@@ -305,9 +203,8 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
     try {
       const res = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(3000),
       });
 
       if (!res.ok) continue;
@@ -341,22 +238,23 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
         geoHierarchy: Array.isArray(data.geoHierarchy) ? data.geoHierarchy : undefined,
         masterHeads: (data.masterHeads && typeof data.masterHeads === 'object') ? data.masterHeads : undefined,
         users: Array.isArray(data.users) && data.users.length > 0 ? data.users : undefined,
+        deletedAuditIds: data.deletedAuditIds,
+        deletedProjectIds: data.deletedProjectIds,
+        deletedUserIds: data.deletedUserIds,
+        deletedRepairIds: data.deletedRepairIds,
         lastUpdated: data.lastUpdated || new Date().toISOString(),
         updatedBy: data.updatedBy
       };
     } catch {
-      // Try next candidate
+      // Try next
     }
   }
 
-  // If all remote endpoints failed, return local snapshot as safe fallback
-  const localAudits = getAudits();
-  const localProjects = getProjects();
-  const localRepairs = getRepairs();
+  // Safe fallback to local cache
   return {
-    audits: localAudits,
-    projects: localProjects,
-    repairs: localRepairs,
+    audits: getAudits(),
+    projects: getProjects(),
+    repairs: getRepairs(),
     geoHierarchy: getGeoHierarchy(),
     masterHeads: getMasterHeads(),
     users: getUsers(),
@@ -366,53 +264,7 @@ export async function fetchCloudData(): Promise<CloudDatabasePayload | null> {
 }
 
 /**
- * Direct commit to GitHub repository data/master_cloud_database.json
- */
-export async function pushToGitHubMasterDb(
-  payload: CloudDatabasePayload,
-  token: string
-): Promise<boolean> {
-  const repo = 'waqas226-arch/Water-project-Audit';
-  const filePath = 'data/master_cloud_database.json';
-  const apiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
-  
-  try {
-    let sha: string | undefined = undefined;
-    const getRes = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Bearer ${token.trim()}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-    if (getRes.ok) {
-      const fileData = await getRes.json();
-      sha = fileData.sha;
-    }
-
-    const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-    const putRes = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token.trim()}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({
-        message: `FGRF Live Master Cloud DB Sync (${new Date().toISOString()})`,
-        content: contentBase64,
-        sha
-      })
-    });
-
-    return putRes.ok;
-  } catch (e) {
-    console.warn('[GitHub Sync Error]', e);
-    return false;
-  }
-}
-
-/**
- * Push local master database records to Cloud
+ * Push local database state to Cloud (Cloud Firestore and/or Local Server)
  */
 export async function pushLocalToCloud(
   audits: AuditRecord[] = getAudits(),
@@ -427,56 +279,55 @@ export async function pushLocalToCloud(
   deletedUserIds: string[] = getDeletedUserIds(),
   deletedRepairIds: string[] = getDeletedRepairIds()
 ): Promise<boolean> {
-  const endpoint = getCloudSyncEndpoint();
-  const ghToken = getGitHubToken();
+  let firestoreSuccess = false;
 
-  const payload: CloudDatabasePayload = {
-    audits,
-    projects,
-    repairs,
-    geoHierarchy,
-    masterHeads,
-    users,
-    deletedAuditIds,
-    deletedProjectIds,
-    deletedUserIds,
-    deletedRepairIds,
-    lastUpdated: new Date().toISOString(),
-    updatedBy: userId
-  };
-
-  let pushedSuccessfully = false;
-
-  // 1. If running with a local backend server
-  if (endpoint && endpoint.includes('/api/cloud-sync')) {
+  // 1. If Firebase Cloud Firestore is configured, save entities
+  if (isFirebaseConfigured()) {
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) pushedSuccessfully = true;
-    } catch (err) {
-      console.warn('[FGRF Master DB Sync] Local backend unavailable:', err);
+      if (masterHeads) await saveMasterHeadsToFirestore(masterHeads, userId);
+      if (geoHierarchy) await saveGeoHierarchyToFirestore(geoHierarchy, userId);
+      firestoreSuccess = true;
+    } catch (e) {
+      console.warn('[CloudSync] Firestore push error:', e);
     }
   }
 
-  // Update local last sync timestamp
+  // 2. If running with a local Express backend
+  const endpoint = getCloudSyncEndpoint();
+  if (endpoint && endpoint.includes('/api/cloud-sync')) {
+    try {
+      const payload: CloudDatabasePayload = {
+        audits,
+        projects,
+        repairs,
+        geoHierarchy,
+        masterHeads,
+        users,
+        deletedAuditIds,
+        deletedProjectIds,
+        deletedUserIds,
+        deletedRepairIds,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: userId
+      };
+
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch {}
+  }
+
   try {
     localStorage.setItem(STORAGE_LAST_SYNC_KEY, new Date().toISOString());
   } catch {}
 
-  // Instant real-time synchronization across all tabs and browser windows
+  // Broadcast to other tabs
   syncBus?.postMessage({ type: 'DATA_SYNCED', timestamp: new Date().toISOString() });
-  return pushedSuccessfully || true;
+  return firestoreSuccess || true;
 }
 
-/**
- * Merge local and cloud audits & projects intelligently by ID & timestamp
- */
 export function mergeAudits(
   local: AuditRecord[], 
   remote: AuditRecord[], 
@@ -494,15 +345,12 @@ export function mergeAudits(
   remote.forEach((remoteAudit) => {
     const cleanRemote = sanitizeAuditRecord(remoteAudit);
     if (!cleanRemote) return;
-
-    // Never re-import an audit that was explicitly deleted locally or remotely
     if (deletedIds.includes(cleanRemote.id.trim().toUpperCase())) return;
 
     if (!map.has(cleanRemote.id)) {
       map.set(cleanRemote.id, cleanRemote);
       newCount++;
     } else {
-      // If remote has newer update, keep remote
       const localAudit = map.get(cleanRemote.id)!;
       const remoteTime = new Date(cleanRemote.updatedAt || cleanRemote.createdAt || cleanRemote.inspectionDateTime || 0).getTime();
       const localTime = new Date(localAudit.updatedAt || localAudit.createdAt || localAudit.inspectionDateTime || 0).getTime();
@@ -512,10 +360,7 @@ export function mergeAudits(
     }
   });
 
-  return {
-    merged: Array.from(map.values()),
-    newCount
-  };
+  return { merged: Array.from(map.values()), newCount };
 }
 
 export function mergeProjects(
@@ -535,15 +380,12 @@ export function mergeProjects(
     if (!remoteProj || !remoteProj.id) return;
     const cleanId = String(remoteProj.id).trim().toUpperCase();
     if (cleanId === 'FGRF-WTS-SND-004' || String(remoteProj.name || '').includes('Haji Qasim Brohi')) return;
-
-    // Never re-import a project that was explicitly deleted
     if (deletedIds.includes(remoteProj.id.trim().toUpperCase())) return;
 
     if (!map.has(remoteProj.id)) {
       map.set(remoteProj.id, remoteProj);
       newCount++;
     } else {
-      // Preserve more complete data
       const localProj = map.get(remoteProj.id)!;
       map.set(remoteProj.id, {
         ...localProj,
@@ -553,10 +395,7 @@ export function mergeProjects(
     }
   });
 
-  return {
-    merged: Array.from(map.values()),
-    newCount
-  };
+  return { merged: Array.from(map.values()), newCount };
 }
 
 export function mergeRepairs(
@@ -594,10 +433,6 @@ export function mergeRepairs(
   return Array.from(map.values());
 }
 
-/**
- * Merge local and cloud user ID profiles & access rights
- * Strictly honors deleted user tombstones so deleted IDs NEVER recover
- */
 export function mergeUsers(
   local: UserProfile[], 
   remote: UserProfile[],
@@ -606,14 +441,12 @@ export function mergeUsers(
   const map = new Map<string, UserProfile>();
   const bannedSet = new Set(deletedUserIds.map((id) => id.trim().toUpperCase()));
 
-  // Always seed baseline Super Admin account (Syed Waqas) if not banned
   PRECONFIGURED_USERS.forEach((u) => {
     if (u && u.id && !bannedSet.has(u.id.toUpperCase())) {
       map.set(u.id.toUpperCase(), u);
     }
   });
 
-  // Local registered users
   (local || []).forEach((u) => {
     if (u && u.id && !bannedSet.has(u.id.toUpperCase())) {
       map.set(u.id.toUpperCase(), u);
@@ -621,11 +454,9 @@ export function mergeUsers(
   });
 
   let newCount = 0;
-  // Remote registered users
   (remote || []).forEach((r) => {
     if (!r || !r.id) return;
     const key = r.id.toUpperCase();
-    // NEVER re-import any user that was deleted
     if (bannedSet.has(key)) return;
 
     if (!map.has(key)) {
@@ -644,14 +475,18 @@ export function mergeUsers(
     }
   });
 
-  return {
-    merged: Array.from(map.values()),
-    newCount
-  };
+  return { merged: Array.from(map.values()), newCount };
 }
 
 export async function publishUsersToCloud(users: UserProfile[] = getUsers(), userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveUsers(users);
+
+  if (isFirebaseConfigured()) {
+    for (const u of users) {
+      await saveUserToFirestore(u, userId);
+    }
+  }
+
   const success = await pushLocalToCloud(
     getAudits(),
     getProjects(),
@@ -661,34 +496,71 @@ export async function publishUsersToCloud(users: UserProfile[] = getUsers(), use
     getMasterHeads(),
     users
   );
+
   syncBus?.postMessage({ type: 'USERS_SYNCED', timestamp: new Date().toISOString() });
   return success;
 }
 
 export async function publishGeoHierarchyToCloud(geo: CountryInfo[], userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveGeoHierarchy(geo);
+
+  if (isFirebaseConfigured()) {
+    await saveGeoHierarchyToFirestore(geo, userId);
+  }
+
   const users = getUsers();
   const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, geo, getMasterHeads(), users);
   syncBus?.postMessage({ type: 'GEO_SYNCED', timestamp: new Date().toISOString() });
-  syncBus?.postMessage({ type: 'USERS_SYNCED', timestamp: new Date().toISOString() });
   return success;
 }
 
 export async function publishMasterHeadsToCloud(heads: MasterHeadsConfig, userId: string = 'FGRF-MIS-01'): Promise<boolean> {
   saveMasterHeads(heads);
+
+  if (isFirebaseConfigured()) {
+    await saveMasterHeadsToFirestore(heads, userId);
+  }
+
   const users = getUsers();
   const success = await pushLocalToCloud(getAudits(), getProjects(), getRepairs(), userId, getGeoHierarchy(), heads, users);
   syncBus?.postMessage({ type: 'HEADS_SYNCED', timestamp: new Date().toISOString() });
   return success;
 }
 
+export async function publishAuditToCloud(
+  audit: AuditRecord, 
+  project: WaterProject, 
+  repairs: RepairItem[], 
+  userId: string = 'FGRF-MIS-01'
+): Promise<boolean> {
+  if (isFirebaseConfigured()) {
+    await submitAuditToFirestore(audit, project, repairs, userId);
+  }
+
+  const cloud = await fetchCloudData();
+  const currentAudits = cloud?.audits || getAudits();
+  const currentProjects = cloud?.projects || getProjects();
+  const currentRepairs = cloud?.repairs || getRepairs();
+
+  const allDeletedAuditIds = getDeletedAuditIds();
+  const allDeletedProjectIds = getDeletedProjectIds();
+  const allDeletedRepairIds = getDeletedRepairIds();
+
+  const { merged: mergedAudits } = mergeAudits(currentAudits, [audit], allDeletedAuditIds);
+  const { merged: mergedProjects } = mergeProjects(currentProjects, [project], allDeletedProjectIds);
+  const mergedRepairs = mergeRepairs(currentRepairs, repairs, allDeletedRepairIds, allDeletedAuditIds);
+
+  return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads(), getUsers());
+}
+
 /**
  * Full two-way synchronization:
  * 1. Downloads remote cloud data
  * 2. Merges with local data & absorbs tombstones
- * 3. Uploads merged superset with tombstones back to cloud so deleted records NEVER recover
+ * 3. Uploads merged superset with tombstones back to cloud
  */
 export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<SyncResult> {
+  const engine = getActiveCloudEngine();
   const localAudits = getAudits();
   const localProjects = getProjects();
   const localRepairs = getRepairs();
@@ -702,7 +574,7 @@ export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<
   const remoteRepairs = cloud?.repairs || [];
   const remoteUsers = cloud?.users || [];
 
-  // 1. Absorb remote tombstones into local tombstone registries
+  // Absorb tombstones
   if (Array.isArray(cloud?.deletedAuditIds)) {
     cloud.deletedAuditIds.forEach((id) => markAuditAsDeleted(id));
   }
@@ -721,27 +593,24 @@ export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<
   const allDeletedUserIds = getDeletedUserIds();
   const allDeletedRepairIds = getDeletedRepairIds();
 
-  // 2. Merge records, strictly honoring all tombstones
   const { merged: mergedAudits, newCount: newAuditsCount } = mergeAudits(localAudits, remoteAudits, allDeletedAuditIds);
   const { merged: mergedProjects, newCount: newProjectsCount } = mergeProjects(localProjects, remoteProjects, allDeletedProjectIds);
   const mergedRepairs = mergeRepairs(localRepairs, remoteRepairs, allDeletedRepairIds, allDeletedAuditIds);
   const { merged: mergedUsers, newCount: newUsersCount } = mergeUsers(localUsers, remoteUsers, allDeletedUserIds);
 
-  // Synchronize Geo Hierarchy from authoritative Cloud Master DB
   let geoUpdated = false;
   if (cloud?.geoHierarchy && Array.isArray(cloud.geoHierarchy) && cloud.geoHierarchy.length > 0) {
-    saveGeoHierarchy(cloud.geoHierarchy);
+    const mergedGeo = mergeGeoHierarchy(localGeo, cloud.geoHierarchy);
+    saveGeoHierarchy(mergedGeo);
     geoUpdated = true;
   }
 
-  // Synchronize Users
   let usersUpdated = false;
   if (newUsersCount > 0 || (remoteUsers.length > 0 && JSON.stringify(localUsers) !== JSON.stringify(mergedUsers))) {
     saveUsers(mergedUsers);
     usersUpdated = true;
   }
 
-  // Merge Master Heads
   let mergedHeads = localHeads;
   if (cloud?.masterHeads && typeof cloud.masterHeads === 'object') {
     mergedHeads = {
@@ -764,13 +633,18 @@ export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<
     saveMasterHeads(mergedHeads);
   }
 
-  // Save merged locally
   saveAudits(mergedAudits);
   saveProjects(mergedProjects);
   saveRepairs(mergedRepairs);
   saveUsers(mergedUsers);
 
-  // Push merged superset back to cloud so other users worldwide get real-time updates and deletions
+  // If Firebase is configured, sync individual entities
+  if (isFirebaseConfigured()) {
+    for (const p of mergedProjects) {
+      await saveProjectToFirestore(p, userId);
+    }
+  }
+
   await pushLocalToCloud(
     mergedAudits, 
     mergedProjects, 
@@ -796,50 +670,29 @@ export async function syncAllWithCloud(userId: string = 'FGRF-MIS-01'): Promise<
   if (usersUpdated || newUsersCount > 0) parts.push(`users updated`);
 
   const countMsg = parts.length > 0 
-    ? `Received ${parts.join(', ')} from cloud.`
-    : `All records, locations & staff IDs synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects, ${mergedUsers.length} users).`;
+    ? `Received ${parts.join(', ')}.`
+    : `All records & locations synchronized (${mergedAudits.length} audits, ${mergedProjects.length} projects, ${mergedUsers.length} users).`;
+
+  const engineLabel = engine === 'firebase' ? 'Firebase Cloud Firestore' : engine === 'local_server' ? 'Local Central DB' : 'Offline Cache';
 
   return {
     success: true,
+    engine,
     newAuditsCount,
     newProjectsCount,
     newUsersCount,
     geoUpdated,
     usersUpdated,
-    message: `Cloud Master DB Live (Online Mode): ${countMsg}`,
+    message: `${engineLabel}: ${countMsg}`,
     timestamp: new Date().toISOString()
   };
 }
 
 /**
- * Immediately publish a newly submitted inspection from field staff to cloud
- */
-export async function publishAuditToCloud(audit: AuditRecord, project: WaterProject, repairs: RepairItem[], userId: string = 'FGRF-MIS-01'): Promise<boolean> {
-  try {
-    const cloud = await fetchCloudData();
-    const currentAudits = cloud?.audits || getAudits();
-    const currentProjects = cloud?.projects || getProjects();
-    const currentRepairs = cloud?.repairs || getRepairs();
-
-    const allDeletedAuditIds = getDeletedAuditIds();
-    const allDeletedProjectIds = getDeletedProjectIds();
-    const allDeletedRepairIds = getDeletedRepairIds();
-
-    const { merged: mergedAudits } = mergeAudits(currentAudits, [audit], allDeletedAuditIds);
-    const { merged: mergedProjects } = mergeProjects(currentProjects, [project], allDeletedProjectIds);
-    const mergedRepairs = mergeRepairs(currentRepairs, repairs, allDeletedRepairIds, allDeletedAuditIds);
-
-    return await pushLocalToCloud(mergedAudits, mergedProjects, mergedRepairs, userId, getGeoHierarchy(), getMasterHeads(), getUsers());
-  } catch (e) {
-    console.warn('[FGRF Cloud Sync] Failed to publish audit to cloud:', e);
-    return false;
-  }
-}
-
-/**
- * Real-time background sync hook:
- * Automatically polls for updates every 15 seconds for multi-location users worldwide,
- * and syncs on tab focus / window visibility change and BroadcastChannel within seconds.
+ * Real-time background sync engine:
+ * 1. If Firebase is configured, listens to live WebSocket streams (sub-second sync)
+ * 2. If Firebase is not configured, polls every 15 seconds against local server
+ * 3. Listens to window focus / visibility change and BroadcastChannel
  */
 export function startRealtimeCloudSync(
   onUpdate: (data: { 
@@ -852,9 +705,119 @@ export function startRealtimeCloudSync(
     newCount: number;
     geoUpdated?: boolean;
     usersUpdated?: boolean;
+    engine?: CloudEngineType;
   }) => void,
   userId: string = 'FGRF-MIS-01'
 ): () => void {
+  // 1. If Firebase Cloud Firestore is configured, use live WebSocket listeners
+  if (isFirebaseConfigured()) {
+    console.log('[FGRF Cloud Sync] Initializing Firebase Cloud Firestore live real-time listeners...');
+
+    const unsubFirestore = subscribeToRealtimeFirestore({
+      onProjects: (remoteProjects) => {
+        const deletedIds = getDeletedProjectIds();
+        const { merged, newCount } = mergeProjects(getProjects(), remoteProjects, deletedIds);
+        saveProjects(merged);
+        onUpdate({
+          audits: getAudits(),
+          projects: merged,
+          repairs: getRepairs(),
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: getMasterHeads(),
+          users: getUsers(),
+          newCount,
+          engine: 'firebase',
+        });
+      },
+      onAudits: (remoteAudits) => {
+        const deletedIds = getDeletedAuditIds();
+        const { merged, newCount } = mergeAudits(getAudits(), remoteAudits, deletedIds);
+        saveAudits(merged);
+        onUpdate({
+          audits: merged,
+          projects: getProjects(),
+          repairs: getRepairs(),
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: getMasterHeads(),
+          users: getUsers(),
+          newCount,
+          engine: 'firebase',
+        });
+      },
+      onRepairs: (remoteRepairs) => {
+        const merged = mergeRepairs(getRepairs(), remoteRepairs);
+        saveRepairs(merged);
+        onUpdate({
+          audits: getAudits(),
+          projects: getProjects(),
+          repairs: merged,
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: getMasterHeads(),
+          users: getUsers(),
+          newCount: 0,
+          engine: 'firebase',
+        });
+      },
+      onMasterHeads: (remoteHeads) => {
+        saveMasterHeads(remoteHeads);
+        onUpdate({
+          audits: getAudits(),
+          projects: getProjects(),
+          repairs: getRepairs(),
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: remoteHeads,
+          users: getUsers(),
+          newCount: 0,
+          engine: 'firebase',
+        });
+      },
+      onGeoHierarchy: (remoteGeo) => {
+        const mergedGeo = mergeGeoHierarchy(getGeoHierarchy(), remoteGeo);
+        saveGeoHierarchy(mergedGeo);
+        onUpdate({
+          audits: getAudits(),
+          projects: getProjects(),
+          repairs: getRepairs(),
+          geoHierarchy: mergedGeo,
+          masterHeads: getMasterHeads(),
+          users: getUsers(),
+          newCount: 0,
+          geoUpdated: true,
+          engine: 'firebase',
+        });
+      },
+      onUsers: (remoteUsers) => {
+        const { merged, newCount } = mergeUsers(getUsers(), remoteUsers);
+        saveUsers(merged);
+        onUpdate({
+          audits: getAudits(),
+          projects: getProjects(),
+          repairs: getRepairs(),
+          geoHierarchy: getGeoHierarchy(),
+          masterHeads: getMasterHeads(),
+          users: merged,
+          newCount,
+          usersUpdated: true,
+          engine: 'firebase',
+        });
+      },
+      onTombstones: (tombstones) => {
+        tombstones.deletedAuditIds?.forEach((id) => markAuditAsDeleted(id));
+        tombstones.deletedProjectIds?.forEach((id) => markProjectAsDeleted(id));
+        tombstones.deletedUserIds?.forEach((id) => markUserAsDeleted(id));
+        tombstones.deletedRepairIds?.forEach((id) => markRepairAsDeleted(id));
+      },
+      onError: (err) => {
+        console.warn('[FGRF Firestore Realtime Notice]', err);
+      }
+    });
+
+    return () => {
+      unsubFirestore();
+    };
+  }
+
+  // 2. Fallback polling mode for local development or when Firebase is unconfigured
   let isSyncing = false;
   let lastSyncTimestamp = Date.now();
 
@@ -874,23 +837,20 @@ export function startRealtimeCloudSync(
           users: getUsers(),
           newCount: res.newAuditsCount,
           geoUpdated: res.geoUpdated,
-          usersUpdated: res.usersUpdated
+          usersUpdated: res.usersUpdated,
+          engine: res.engine
         });
       }
     } catch (err) {
-      console.warn('[FGRF Realtime Sync Error]', err);
+      console.warn('[FGRF Realtime Sync Notice]', err);
     } finally {
       isSyncing = false;
     }
   };
 
-  // Run initial sync after 800ms
   const initialTimer = setTimeout(triggerSync, 800);
-
-  // Poll cloud every 15 seconds (15,000ms) - real-time sync across worldwide users
   const interval = setInterval(triggerSync, 15000);
 
-  // Sync on tab focus / window visibility change (if > 5 seconds since last sync)
   const handleVisibilityOrFocus = () => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible' && Date.now() - lastSyncTimestamp > 5000) {
       triggerSync();
@@ -904,7 +864,6 @@ export function startRealtimeCloudSync(
     window.addEventListener('focus', handleVisibilityOrFocus);
   }
 
-  // Cross-tab broadcast listener for immediate sub-second local sync
   const handleBroadcast = (event: MessageEvent) => {
     if (
       event.data?.type === 'DATA_SYNCED' || 
@@ -921,7 +880,8 @@ export function startRealtimeCloudSync(
         users: getUsers(),
         newCount: 0,
         geoUpdated: event.data?.type === 'GEO_SYNCED',
-        usersUpdated: event.data?.type === 'USERS_SYNCED'
+        usersUpdated: event.data?.type === 'USERS_SYNCED',
+        engine: getActiveCloudEngine()
       });
     }
   };

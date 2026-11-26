@@ -124,6 +124,7 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
   const handleSaveAndSyncHeads = (updated: MasterHeadsConfig) => {
     saveMasterHeads(updated);
     publishMasterHeadsToCloud(updated, currentUser.id).catch(() => {});
+    if (onRefreshGeo) onRefreshGeo();
   };
 
   const handleSaveAndSyncGeo = (updated: CountryInfo[]) => {
@@ -339,13 +340,34 @@ export const OpenHeadsView: React.FC<OpenHeadsViewProps> = ({
       showToast('Country already exists.');
       return;
     }
+    const defaultProvName = `${name} Province`;
     const newC: CountryInfo = {
       name,
       nameUrdu: newCountryUrdu.trim() || name,
       code: name.slice(0, 3).toUpperCase(),
       flag: '🌐',
       centerCoordinates: { lat: 30, lng: 70 },
-      provinces: [],
+      provinces: [
+        {
+          name: defaultProvName,
+          nameUrdu: newCountryUrdu.trim() || defaultProvName,
+          divisions: [
+            {
+              name: `${name} Central Division`,
+              nameUrdu: newCountryUrdu.trim() || `${name} Central Division`,
+              districts: [
+                {
+                  name: `${name} Central District`,
+                  nameUrdu: newCountryUrdu.trim() || `${name} Central District`,
+                  lat: 30,
+                  lng: 70,
+                  tehsils: ['Central Town']
+                }
+              ]
+            }
+          ]
+        }
+      ],
     };
     const updated = [...geoCountries, newC];
     setGeoCountries(updated);

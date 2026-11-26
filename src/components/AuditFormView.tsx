@@ -34,6 +34,7 @@ import {
   CheckpointItem, 
   CheckpointStatus, 
   InstallationType, 
+  MasterHeadsConfig,
   MasterQuestionHead,
   OverallCondition, 
   RepairItem, 
@@ -48,8 +49,6 @@ import {
   WATER_SAFETY_DISCLAIMER_UR 
 } from '../utils/auditLogic.ts';
 import { 
-  GLOBAL_COUNTRIES, 
-  PAKISTAN_PROVINCES, 
   CountryInfo, 
   ProvinceInfo, 
   DivisionInfo, 
@@ -74,6 +73,7 @@ interface AuditFormViewProps {
   onCancel?: () => void;
   onViewAuditCertificate?: (audit: AuditRecord) => void;
   geoHierarchy?: CountryInfo[];
+  masterHeads?: MasterHeadsConfig;
 }
 
 export const AuditFormView: React.FC<AuditFormViewProps> = ({
@@ -84,6 +84,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   onCancel,
   onViewAuditCertificate,
   geoHierarchy: propGeoHierarchy,
+  masterHeads: propMasterHeads,
 }) => {
   // Pre-fill if a project is selected
   const initialProject = preselectedProjectId
@@ -98,9 +99,9 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   // Project ID State
   const [projectId, setProjectId] = useState<string>(initialProject?.id || preselectedProjectId || projects[0]?.id || 'FGRF-WTS-001');
 
-  // Master Heads & Geographic Configuration from Storage
-  const masterHeads = React.useMemo(() => getMasterHeads(), []);
+  // Master Heads & Geographic Configuration from Props & Storage
   const geoHierarchy = propGeoHierarchy || getGeoHierarchy();
+  const masterHeads = propMasterHeads || getMasterHeads();
 
   // Section A states: Global 5-tier Hierarchy (Country -> Province -> Division -> District -> Tahseel/Town)
   const [country, setCountry] = useState(initialProject?.country || currentUser.country || 'Pakistan');
@@ -203,34 +204,46 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
-  // Cascading Geographical Hierarchy logic using editable geoHierarchy
-  const currentCountryObj = geoHierarchy.find((c) => c.name === country) || geoHierarchy[0] || GLOBAL_COUNTRIES[0];
-  const availableProvinces = currentCountryObj.provinces || [];
-  const currentProvinceInfo = availableProvinces.find((p) => p.name === province) || availableProvinces[0] || { name: province, nameUrdu: '', divisions: [] };
-  const availableDivisions = currentProvinceInfo.divisions || [];
-  const currentDivisionInfo = availableDivisions.find((d) => d.name === division) || availableDivisions[0] || { name: division, nameUrdu: '', districts: [] };
-  const availableDistricts = currentDivisionInfo.districts || [];
-  const currentDistrictInfo = availableDistricts.find((d) => d.name === district) || availableDistricts[0] || { name: district, nameUrdu: '', tehsils: [], lat: 24.8485, lng: 67.1352 };
-  const availableTehsils = currentDistrictInfo.tehsils || [];
+  // Cascading Geographical Hierarchy logic using dynamic geoHierarchy
+  const currentCountryObj = geoHierarchy.find((c) => c.name.toLowerCase() === country.toLowerCase()) || geoHierarchy[0];
+  const availableProvinces = currentCountryObj?.provinces || [];
+  const currentProvinceInfo = availableProvinces.find((p) => p.name.toLowerCase() === province.toLowerCase()) || availableProvinces[0] || { name: province, nameUrdu: '', divisions: [] };
+  const availableDivisions = currentProvinceInfo?.divisions || [];
+  const currentDivisionInfo = availableDivisions.find((d) => d.name.toLowerCase() === division.toLowerCase()) || availableDivisions[0] || { name: division, nameUrdu: '', districts: [] };
+  const availableDistricts = currentDivisionInfo?.districts || [];
+  const currentDistrictInfo = availableDistricts.find((d) => d.name.toLowerCase() === district.toLowerCase()) || availableDistricts[0] || { name: district, nameUrdu: '', tehsils: [], lat: currentCountryObj?.centerCoordinates?.lat || 24.8485, lng: currentCountryObj?.centerCoordinates?.lng || 67.1352 };
+  const availableTehsils = currentDistrictInfo?.tehsils || [];
 
   // Cascading Handlers
   const handleCountryChange = (newCountry: string) => {
     setCountry(newCountry);
-    const cObj = geoHierarchy.find((c) => c.name === newCountry) || geoHierarchy[0] || GLOBAL_COUNTRIES[0];
-    if (cObj && cObj.provinces && cObj.provinces[0]) {
+    const cObj = geoHierarchy.find((c) => c.name.toLowerCase() === newCountry.toLowerCase()) || geoHierarchy[0];
+    if (cObj && cObj.provinces && cObj.provinces.length > 0) {
       const pObj = cObj.provinces[0];
       setProvince(pObj.name);
-      if (pObj.divisions && pObj.divisions[0]) {
+      if (pObj.divisions && pObj.divisions.length > 0) {
         const divObj = pObj.divisions[0];
         setDivision(divObj.name);
-        if (divObj.districts && divObj.districts[0]) {
+        if (divObj.districts && divObj.districts.length > 0) {
           const distObj = divObj.districts[0];
           setDistrict(distObj.name);
           setTehsil(distObj.tehsils[0] || 'Center');
-          setGpsLat(distObj.lat);
-          setGpsLng(distObj.lng);
+          setGpsLat(distObj.lat || cObj.centerCoordinates?.lat || 30);
+          setGpsLng(distObj.lng || cObj.centerCoordinates?.lng || 70);
+        } else {
+          setDistrict('');
+          setTehsil('');
         }
+      } else {
+        setDivision('');
+        setDistrict('');
+        setTehsil('');
       }
+    } else {
+      setProvince('');
+      setDivision('');
+      setDistrict('');
+      setTehsil('');
     }
   };
 
@@ -768,9 +781,9 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                   onChange={(e) => handleCountryChange(e.target.value)}
                   className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-medium"
                 >
-                  {GLOBAL_COUNTRIES.map((c) => (
+                  {geoHierarchy.map((c) => (
                     <option key={c.name} value={c.name}>
-                      {c.flag} {c.name} ({c.nameUrdu})
+                      {c.flag || '🌐'} {c.name} {c.nameUrdu ? `(${c.nameUrdu})` : ''}
                     </option>
                   ))}
                 </select>
@@ -786,11 +799,15 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                   onChange={(e) => handleProvinceChange(e.target.value)}
                   className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
-                  {availableProvinces.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name} {p.nameUrdu ? `(${p.nameUrdu})` : ''}
-                    </option>
-                  ))}
+                  {availableProvinces.length === 0 ? (
+                    <option value={province || 'General'}>{province || 'General / عمومی'}</option>
+                  ) : (
+                    availableProvinces.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name} {p.nameUrdu ? `(${p.nameUrdu})` : ''}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -804,11 +821,15 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                   onChange={(e) => handleDivisionChange(e.target.value)}
                   className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
-                  {availableDivisions.map((d) => (
-                    <option key={d.name} value={d.name}>
-                      {d.name} {d.nameUrdu ? `(${d.nameUrdu})` : ''}
-                    </option>
-                  ))}
+                  {availableDivisions.length === 0 ? (
+                    <option value={division || 'General'}>{division || 'General / عمومی'}</option>
+                  ) : (
+                    availableDivisions.map((d) => (
+                      <option key={d.name} value={d.name}>
+                        {d.name} {d.nameUrdu ? `(${d.nameUrdu})` : ''}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -822,11 +843,15 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                   onChange={(e) => handleDistrictChange(e.target.value)}
                   className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
                 >
-                  {availableDistricts.map((d) => (
-                    <option key={d.name} value={d.name}>
-                      {d.name} {d.nameUrdu ? `(${d.nameUrdu})` : ''}
-                    </option>
-                  ))}
+                  {availableDistricts.length === 0 ? (
+                    <option value={district || 'General'}>{district || 'General / عمومی'}</option>
+                  ) : (
+                    availableDistricts.map((d) => (
+                      <option key={d.name} value={d.name}>
+                        {d.name} {d.nameUrdu ? `(${d.nameUrdu})` : ''}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -1002,7 +1027,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
                 onChange={(e) => setInstallationType(e.target.value as InstallationType)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
               >
-                {masterHeads.categories.map((cat) => (
+                {masterHeads.categories.map((cat: string) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
@@ -1419,7 +1444,7 @@ export const AuditFormView: React.FC<AuditFormViewProps> = ({
               Overall Condition / مجموعی حالت <span className="text-rose-500">*</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {masterHeads.conditions.map((item) => {
+              {masterHeads.conditions.map((item: any) => {
                 const isSelected = overallCondition === item.id;
                 const colorMap: Record<string, string> = {
                   emerald: 'border-emerald-500 bg-emerald-50 text-emerald-900',

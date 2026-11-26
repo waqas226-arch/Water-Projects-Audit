@@ -15,6 +15,8 @@ import { UserProfile, UserRole } from '../types/index.ts';
 import { getDefaultRightsForRole } from '../utils/auditLogic.ts';
 import { FGRF_OFFICIAL_LOGO } from '../assets/fgrfLogo.ts';
 import { detectClientIp, logUserActivity } from '../utils/storage.ts';
+import { loginWithStaffCredentials } from '../firebase/auth.ts';
+import { getActiveCloudEngine } from '../utils/cloudSync.ts';
 
 interface LoginScreenProps {
   users: UserProfile[];
@@ -35,7 +37,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onOpen
     });
   }, []);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -54,70 +56,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onOpen
 
     setLoading(true);
 
-    setTimeout(() => {
-      const matched = users.find(
-        (u) => u.id.toUpperCase() === trimmedId || u.email.toUpperCase() === trimmedId
-      );
+    try {
+      const authRes = await loginWithStaffCredentials(trimmedId, trimmedPass, users);
 
-      if (matched) {
-        if (matched.status === 'suspended') {
-          setErrorMsg('This User ID account is suspended. Please contact Super Administrator.');
-          setLoading(false);
-          return;
-        }
-
-        // Verify password if specified, or accept standard default 1234 / match
-        if (matched.password && matched.password !== trimmedPass && trimmedPass !== '1234' && trimmedPass !== 'admin') {
-          setErrorMsg('Invalid password. Please check your credentials or use default PIN.');
-          setLoading(false);
-          return;
-        }
-
-        // Log user activity
-        logUserActivity({
-          userId: matched.id,
-          userName: matched.name,
-          userRole: matched.role === 'super_admin' ? 'Super Admin (HQ)' : matched.designation,
-          ipAddress: clientIp,
-          actionType: 'LOGIN',
-          actionDescription: `User ${matched.id} (${matched.name}) successfully logged in`,
-          details: `Client IP: ${clientIp} • Role: ${matched.role}`,
-        });
-
-        onLogin(matched);
-      } else {
-        // Create custom authorized session for valid organizational ID
-        const targetRole: UserRole = trimmedId.includes('HQ') || trimmedId.includes('ADMIN') || trimmedId.includes('MIS')
-          ? 'super_admin'
-          : 'field_inspector';
-
-        const customUser: UserProfile = {
-          id: trimmedId,
-          name: `Authorized Staff (${trimmedId})`,
-          role: targetRole,
-          designation: 'Field Operations Specialist',
-          province: 'Sindh',
-          email: `${trimmedId.toLowerCase()}@fgrf.org`,
-          phone: '+92 300 0000000',
-          password: trimmedPass,
-          status: 'active',
-          rights: getDefaultRightsForRole(targetRole),
-        };
-
-        logUserActivity({
-          userId: customUser.id,
-          userName: customUser.name,
-          userRole: targetRole,
-          ipAddress: clientIp,
-          actionType: 'LOGIN',
-          actionDescription: `Authorized staff ${customUser.id} logged in`,
-          details: `Client IP: ${clientIp}`,
-        });
-
-        onLogin(customUser);
+      if (!authRes.success || !authRes.user) {
+        setErrorMsg(authRes.error || 'Invalid credentials. Please check your User ID and Password.');
+        setLoading(false);
+        return;
       }
+
+      const activeUser = authRes.user;
+
+      // Log user activity
+      logUserActivity({
+        userId: activeUser.id,
+        userName: activeUser.name,
+        userRole: activeUser.role === 'super_admin' ? 'Super Admin (HQ)' : activeUser.designation,
+        ipAddress: clientIp,
+        actionType: 'LOGIN',
+        actionDescription: `User ${activeUser.id} (${activeUser.name}) logged in`,
+        details: `Client IP: ${clientIp} • Role: ${activeUser.role} • Engine: ${getActiveCloudEngine()}`,
+      });
+
+      onLogin(activeUser);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Authentication error.');
+    } finally {
       setLoading(false);
-    }, 200);
+    }
   };
 
   return (
@@ -322,13 +288,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onOpen
 
             </form>
 
-            {/* Security Notice & IP Indicator */}
-            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-1 text-xs text-slate-600">
+            {/* Security Notice & IP / Cloud Indicator */}
+            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-1.5 text-xs text-slate-600">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-700">Client IP Address:</span>
                 <span className="font-mono text-emerald-700 font-bold">{clientIp}</span>
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60">
+                <span className="text-slate-500">Central Database:</span>
+                <span className="inline-flex items-center gap-1.5 font-bold font-mono">
+                  <span className={`w-2 h-2 rounded-full ${getActiveCloudEngine() === 'firebase' ? 'bg-emerald-500 animate-pulse' : 'bg-teal-500'}`} />
+                  <span className="text-slate-700">
+                    {getActiveCloudEngine() === 'firebase' ? 'Google Firebase Firestore (Live)' : getActiveCloudEngine() === 'local_server' ? 'Local Central DB' : 'Offline Persistence Mode'}
+                  </span>
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 pt-0.5">
                 All login attempts and actions are recorded in the central FGRF Audit Log Sheet.
               </div>
             </div>

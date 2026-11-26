@@ -401,8 +401,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-700 focus:outline-hidden"
           >
             <option value="all">All Jurisdictions / تمام صوبے</option>
-            {PAKISTAN_PROVINCES.map((p) => (
-              <option key={p.name} value={p.name}>{p.name}</option>
+            {availableProvinces.map((p) => (
+              <option key={p.name} value={p.name}>{p.name} {p.nameUrdu ? `(${p.nameUrdu})` : ''}</option>
             ))}
           </select>
 

@@ -487,6 +487,9 @@ export function deleteUser(
   import('./cloudSync.ts').then((cs) => {
     cs.publishUsersToCloud(filtered, 'FGRF-MIS-01').catch(() => {});
   }).catch(() => {});
+  import('../firebase/firestore.ts').then((fs) => {
+    fs.deleteUserFromFirestore(cleanId, 'FGRF-MIS-01').catch(() => {});
+  }).catch(() => {});
 
   return { success: true, users: filtered };
 }
@@ -731,6 +734,9 @@ export function deleteProject(projectId: string, actorRole?: string): WaterProje
   import('./cloudSync.ts').then((cs) => {
     cs.pushLocalToCloud(getAudits(), filtered, getRepairs(), 'FGRF-MIS-01');
   }).catch(() => {});
+  import('../firebase/firestore.ts').then((fs) => {
+    fs.deleteProjectFromFirestore(cleanId, 'FGRF-MIS-01').catch(() => {});
+  }).catch(() => {});
   return filtered;
 }
 
@@ -829,6 +835,9 @@ export function deleteAudit(auditId: string, actorRole?: string): AuditRecord[] 
   // Automatically broadcast deletion to Real-Time Central Cloud Database
   import('./cloudSync.ts').then(cs => {
     cs.pushLocalToCloud(filteredAudits, getProjects(), filteredRepairs, 'FGRF-MIS-01');
+  }).catch(() => {});
+  import('../firebase/firestore.ts').then((fs) => {
+    fs.deleteAuditFromFirestore(cleanId, 'FGRF-MIS-01').catch(() => {});
   }).catch(() => {});
 
   return filteredAudits;
@@ -1009,6 +1018,27 @@ export function getGeoHierarchy(): CountryInfo[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
+      // Ensure all custom countries have at least one province and division
+      parsed.forEach((c) => {
+        if (!Array.isArray(c.provinces) || c.provinces.length === 0) {
+          const provName = `${c.name} Region`;
+          c.provinces = [{
+            name: provName,
+            nameUrdu: c.nameUrdu || provName,
+            divisions: [{
+              name: `${c.name} Division`,
+              nameUrdu: c.nameUrdu || `${c.name} Division`,
+              districts: [{
+                name: `${c.name} District`,
+                nameUrdu: c.nameUrdu || `${c.name} District`,
+                lat: c.centerCoordinates?.lat || 30,
+                lng: c.centerCoordinates?.lng || 70,
+                tehsils: ['Center']
+              }]
+            }]
+          }];
+        }
+      });
       return parsed;
     }
     return GLOBAL_COUNTRIES;
@@ -1018,6 +1048,29 @@ export function getGeoHierarchy(): CountryInfo[] {
 }
 
 export function saveGeoHierarchy(countries: CountryInfo[]): void {
+  // Ensure every country has at least one province before saving
+  if (Array.isArray(countries)) {
+    countries.forEach((c) => {
+      if (!Array.isArray(c.provinces) || c.provinces.length === 0) {
+        const provName = `${c.name} Region`;
+        c.provinces = [{
+          name: provName,
+          nameUrdu: c.nameUrdu || provName,
+          divisions: [{
+            name: `${c.name} Division`,
+            nameUrdu: c.nameUrdu || `${c.name} Division`,
+            districts: [{
+              name: `${c.name} District`,
+              nameUrdu: c.nameUrdu || `${c.name} District`,
+              lat: c.centerCoordinates?.lat || 30,
+              lng: c.centerCoordinates?.lng || 70,
+              tehsils: ['Center']
+            }]
+          }]
+        }];
+      }
+    });
+  }
   safeStorage.setItem(STORAGE_KEYS.GEO_HIERARCHY, JSON.stringify(countries));
 }
 

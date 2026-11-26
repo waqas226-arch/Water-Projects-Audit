@@ -5,7 +5,8 @@ import {
   RepairItem, 
   UserProfile, 
   WaterProject,
-  AppNotification 
+  AppNotification,
+  MasterHeadsConfig 
 } from './types/index.ts';
 import { 
   getAudits, 
@@ -15,6 +16,7 @@ import {
   getRepairs, 
   getUsers,
   getGeoHierarchy,
+  getMasterHeads,
   createUser,
   updateUser,
   deleteUser,
@@ -47,13 +49,15 @@ import { OpenHeadsView } from './components/OpenHeadsView.tsx';
 import { ActivityLogView } from './components/ActivityLogView.tsx';
 import { PublicAuditVerificationView } from './components/PublicAuditVerificationView.tsx';
 import { VideoTutorialModal } from './components/VideoTutorialModal.tsx';
+import { CloudMigrationModal } from './components/CloudMigrationModal.tsx';
 import { getDefaultTabForUser, isTabAllowed } from './utils/auditLogic.ts';
 import { 
   startRealtimeCloudSync, 
   syncAllWithCloud, 
   fetchCloudData,
   publishUsersToCloud,
-  pushLocalToCloud
+  pushLocalToCloud,
+  getActiveCloudEngine
 } from './utils/cloudSync.ts';
 import { Menu, Cloud, RefreshCw, CheckCircle2, Video, Bell, Check } from 'lucide-react';
 
@@ -65,6 +69,7 @@ export default function App() {
   const [audits, setAudits] = useState<AuditRecord[]>(getAudits());
   const [repairs, setRepairs] = useState<RepairItem[]>(getRepairs());
   const [geoHierarchy, setGeoHierarchy] = useState<CountryInfo[]>(() => getGeoHierarchy());
+  const [masterHeads, setMasterHeads] = useState<MasterHeadsConfig>(() => getMasterHeads());
   const [notifications, setNotifications] = useState<AppNotification[]>(getNotifications());
   const [showHeaderNotifications, setShowHeaderNotifications] = useState<boolean>(false);
   const unreadNotificationsCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
@@ -90,6 +95,7 @@ export default function App() {
 
   // Modals
   const [isRightsModalOpen, setIsRightsModalOpen] = useState(false);
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
   const [activePrintAudit, setActivePrintAudit] = useState<AuditRecord | null>(null);
   const [activeAiAudit, setActiveAiAudit] = useState<AuditRecord | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -107,6 +113,9 @@ export default function App() {
       setRepairs(payload.repairs);
       if (payload.geoHierarchy) {
         setGeoHierarchy(payload.geoHierarchy);
+      }
+      if (payload.masterHeads) {
+        setMasterHeads(payload.masterHeads);
       }
       if (payload.users && payload.users.length > 0) {
         setUsers(payload.users);
@@ -133,6 +142,7 @@ export default function App() {
       setProjects(getProjects());
       setRepairs(getRepairs());
       setGeoHierarchy(getGeoHierarchy());
+      setMasterHeads(getMasterHeads());
       setUsers(getUsers());
       setLastSyncDisplay(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       showToast(res.message);
@@ -475,18 +485,22 @@ export default function App() {
           <div className="flex items-center gap-2">
             {/* Live Master DB Status & Quick Refresh */}
             <div className="flex items-center rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-bold shadow-2xs overflow-hidden">
-              <div
-                className="flex items-center gap-1.5 px-2.5 py-1.5 select-none"
-                title="Central Master Database - Real-Time Live Sync Active"
+              <button
+                type="button"
+                onClick={() => setIsMigrationModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-emerald-100/70 transition-colors cursor-pointer select-none"
+                title="Central Cloud Master Database Center (Click to manage sync & migration)"
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getActiveCloudEngine() === 'firebase' ? 'bg-emerald-400' : 'bg-teal-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${getActiveCloudEngine() === 'firebase' ? 'bg-emerald-500' : 'bg-teal-500'}`}></span>
                 </span>
                 <Cloud className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden sm:inline">Master DB:</span>
+                <span className="hidden sm:inline font-bold">
+                  {getActiveCloudEngine() === 'firebase' ? 'Firebase Live' : 'Master DB'}:
+                </span>
                 <span className="font-mono text-[11px] text-emerald-800 font-semibold">{lastSyncDisplay}</span>
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={handleManualCloudSync}
@@ -662,6 +676,7 @@ export default function App() {
             projects={projects}
             currentUser={currentUser}
             geoHierarchy={geoHierarchy}
+            masterHeads={masterHeads}
             onAddProject={handleAddProject}
             onBulkImportProjects={handleBulkImport}
             onSelectProjectForAudit={handleAuditForProject}
@@ -675,6 +690,7 @@ export default function App() {
             currentUser={currentUser}
             projects={projects}
             geoHierarchy={geoHierarchy}
+            masterHeads={masterHeads}
             onSubmitAudit={handleSubmitAudit}
             preselectedProjectId={preselectedAuditProjectId}
             onCancel={() => {
@@ -731,6 +747,7 @@ export default function App() {
             showToast={showToast} 
             onRefreshGeo={() => {
               setGeoHierarchy(getGeoHierarchy());
+              setMasterHeads(getMasterHeads());
               setUsers(getUsers());
             }}
             onUsersUpdated={(updatedUsers) => setUsers(updatedUsers)}
@@ -827,6 +844,17 @@ export default function App() {
       <SoftwareRightsModal
         isOpen={isRightsModalOpen}
         onClose={() => setIsRightsModalOpen(false)}
+      />
+
+      {/* Central Cloud Database Migration & Configuration Modal */}
+      <CloudMigrationModal
+        isOpen={isMigrationModalOpen}
+        onClose={() => setIsMigrationModalOpen(false)}
+        currentUser={currentUser}
+        showToast={showToast}
+        onMigrationSuccess={() => {
+          handleManualCloudSync();
+        }}
       />
 
       {/* Official System Video Tutorial Guide Modal */}

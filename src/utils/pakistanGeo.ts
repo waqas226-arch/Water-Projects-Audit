@@ -1103,27 +1103,28 @@ export const GLOBAL_COUNTRIES: CountryInfo[] = [
   },
 ];
 
-export function getCountryByName(name?: string): CountryInfo {
-  if (!name) return GLOBAL_COUNTRIES[0];
-  const found = GLOBAL_COUNTRIES.find(
-    (c) => c.name.toLowerCase() === name.toLowerCase() || c.code.toLowerCase() === name.toLowerCase()
+export function getCountryByName(name?: string, customHierarchy?: CountryInfo[]): CountryInfo {
+  const list = Array.isArray(customHierarchy) && customHierarchy.length > 0 ? customHierarchy : GLOBAL_COUNTRIES;
+  if (!name) return list[0];
+  const found = list.find(
+    (c) => c.name.toLowerCase() === name.toLowerCase() || (c.code && c.code.toLowerCase() === name.toLowerCase())
   );
-  return found || GLOBAL_COUNTRIES[0];
+  return found || list[0];
 }
 
-export function getProvincesForCountry(countryName?: string): ProvinceInfo[] {
-  const c = getCountryByName(countryName);
+export function getProvincesForCountry(countryName?: string, customHierarchy?: CountryInfo[]): ProvinceInfo[] {
+  const c = getCountryByName(countryName, customHierarchy);
   return c.provinces || [];
 }
 
-export function getDivisionsForProvince(countryName?: string, provinceName?: string): DivisionInfo[] {
-  const provinces = getProvincesForCountry(countryName);
+export function getDivisionsForProvince(countryName?: string, provinceName?: string, customHierarchy?: CountryInfo[]): DivisionInfo[] {
+  const provinces = getProvincesForCountry(countryName, customHierarchy);
   const prov = provinces.find((p) => p.name.toLowerCase() === (provinceName || '').toLowerCase()) || provinces[0];
   return prov ? prov.divisions : [];
 }
 
-export function getDistrictsForDivision(countryName?: string, provinceName?: string, divisionName?: string): DistrictInfo[] {
-  const divisions = getDivisionsForProvince(countryName, provinceName);
+export function getDistrictsForDivision(countryName?: string, provinceName?: string, divisionName?: string, customHierarchy?: CountryInfo[]): DistrictInfo[] {
+  const divisions = getDivisionsForProvince(countryName, provinceName, customHierarchy);
   if (divisionName) {
     const div = divisions.find((d) => d.name.toLowerCase() === divisionName.toLowerCase());
     if (div) return div.districts;
@@ -1131,16 +1132,17 @@ export function getDistrictsForDivision(countryName?: string, provinceName?: str
   return divisions.flatMap((d) => d.districts);
 }
 
-export function getTehsilsForDistrict(countryName?: string, provinceName?: string, districtName?: string): string[] {
-  const districts = getDistrictsForDivision(countryName, provinceName);
+export function getTehsilsForDistrict(countryName?: string, provinceName?: string, districtName?: string, customHierarchy?: CountryInfo[]): string[] {
+  const districts = getDistrictsForDivision(countryName, provinceName, undefined, customHierarchy);
   const dist = districts.find((d) => d.name.toLowerCase() === (districtName || '').toLowerCase());
   return dist ? dist.tehsils : [];
 }
 
-export function findGlobalDistrictCoordinates(countryName?: string, districtName?: string): { lat: number; lng: number } {
+export function findGlobalDistrictCoordinates(countryName?: string, districtName?: string, customHierarchy?: CountryInfo[]): { lat: number; lng: number } {
   if (!districtName) return { lat: 24.8607, lng: 67.0011 };
-  const targetCountry = countryName ? getCountryByName(countryName) : null;
-  const searchCountries = targetCountry ? [targetCountry] : GLOBAL_COUNTRIES;
+  const list = Array.isArray(customHierarchy) && customHierarchy.length > 0 ? customHierarchy : GLOBAL_COUNTRIES;
+  const targetCountry = countryName ? getCountryByName(countryName, list) : null;
+  const searchCountries = targetCountry ? [targetCountry] : list;
 
   for (const c of searchCountries) {
     for (const prov of c.provinces) {

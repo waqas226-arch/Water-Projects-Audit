@@ -16,9 +16,9 @@ import {
   Check,
   Edit
 } from 'lucide-react';
-import { InstallationType, OverallCondition, UserProfile, WaterProject } from '../types/index.ts';
+import { InstallationType, MasterHeadsConfig, OverallCondition, UserProfile, WaterProject } from '../types/index.ts';
 import { validateProjectId } from '../utils/auditLogic.ts';
-import { GLOBAL_COUNTRIES, PAKISTAN_PROVINCES, CountryInfo, findGlobalDistrictCoordinates, findDistrictCoordinates } from '../utils/pakistanGeo.ts';
+import { CountryInfo, findGlobalDistrictCoordinates, findDistrictCoordinates } from '../utils/pakistanGeo.ts';
 import { getMasterHeads, getGeoHierarchy, logUserActivity } from '../utils/storage.ts';
 
 interface ProjectDirectoryViewProps {
@@ -30,6 +30,7 @@ interface ProjectDirectoryViewProps {
   onUpdateProject?: (updated: WaterProject) => void;
   onDeleteProject?: (id: string) => void;
   geoHierarchy?: CountryInfo[];
+  masterHeads?: MasterHeadsConfig;
 }
 
 export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
@@ -41,6 +42,7 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
   onUpdateProject,
   onDeleteProject,
   geoHierarchy: propGeoHierarchy,
+  masterHeads: propMasterHeads,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCountry, setFilterCountry] = useState<string>('all');
@@ -74,8 +76,26 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
   const [editingProject, setEditingProject] = useState<WaterProject | null>(null);
   const [editError, setEditError] = useState('');
 
-  const masterHeads = useMemo(() => getMasterHeads(), []);
-  const geoHierarchy = useMemo(() => getGeoHierarchy(), []);
+  const geoHierarchy = propGeoHierarchy || getGeoHierarchy();
+  const masterHeads = propMasterHeads || getMasterHeads();
+
+  const availableFilterProvinces = useMemo(() => {
+    if (filterCountry !== 'all') {
+      const countryObj = geoHierarchy.find((c) => c.name.toLowerCase() === filterCountry.toLowerCase());
+      return countryObj ? countryObj.provinces : [];
+    }
+    const provs: { name: string; nameUrdu?: string }[] = [];
+    const seen = new Set<string>();
+    geoHierarchy.forEach((c) => {
+      (c.provinces || []).forEach((p) => {
+        if (!seen.has(p.name.toLowerCase())) {
+          seen.add(p.name.toLowerCase());
+          provs.push(p);
+        }
+      });
+    });
+    return provs;
+  }, [geoHierarchy, filterCountry]);
 
   const handleOpenEditModal = (proj: WaterProject) => {
     setEditingProject({ ...proj });
@@ -150,7 +170,7 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
   }, [projects, filterCountry, filterProvince, filterType, filterCondition, searchQuery]);
 
   // Modal 5-tier cascade references
-  const selectedCountryObj = GLOBAL_COUNTRIES.find((c) => c.name === newCountry) || GLOBAL_COUNTRIES[0];
+  const selectedCountryObj = geoHierarchy.find((c) => c.name.toLowerCase() === newCountry.toLowerCase()) || geoHierarchy[0];
   const availableProvincesInAdd = selectedCountryObj?.provinces || [];
   const selectedProvObj = availableProvincesInAdd.find((p) => p.name === newProvince) || availableProvincesInAdd[0];
   const availableDivisionsInAdd = selectedProvObj?.divisions || [];
@@ -370,9 +390,9 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-700 focus:outline-hidden"
           >
             <option value="all">All Countries / تمام ممالک</option>
-            {GLOBAL_COUNTRIES.map((c) => (
+            {geoHierarchy.map((c) => (
               <option key={c.name} value={c.name}>
-                {c.flag} {c.name} ({c.nameUrdu})
+                {c.flag || '🌐'} {c.name} {c.nameUrdu ? `(${c.nameUrdu})` : ''}
               </option>
             ))}
           </select>
@@ -383,9 +403,9 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-700 focus:outline-hidden"
           >
             <option value="all">All Provinces / تمام صوبے</option>
-            {PAKISTAN_PROVINCES.map((p) => (
+            {availableFilterProvinces.map((p) => (
               <option key={p.name} value={p.name}>
-                {p.name}
+                {p.name} {p.nameUrdu ? `(${p.nameUrdu})` : ''}
               </option>
             ))}
           </select>
@@ -396,8 +416,11 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-700 focus:outline-hidden"
           >
             <option value="all">All Types / تمام اقسام</option>
-            <option value="Hand Pump">Hand Pump (ہینڈ پمپ)</option>
-            <option value="Filter Hand Pump">Filter Hand Pump (فلٹر پمپ)</option>
+            {(masterHeads.categories || ['Hand Pump', 'Filter Hand Pump']).map((cat: string) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
 
           <select
@@ -406,10 +429,11 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-700 focus:outline-hidden"
           >
             <option value="all">All Conditions / تمام حالتیں</option>
-            <option value="Functional">Functional</option>
-            <option value="Functional – Repair Needed">Repair Needed</option>
-            <option value="Non-functional">Non-functional</option>
-            <option value="Not Installed / Wrong Location">Wrong Location</option>
+            {(masterHeads.conditions || []).map((cond: any) => (
+              <option key={cond.id} value={cond.id}>
+                {cond.labelEn || cond.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -742,7 +766,7 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
                     onChange={(e) => setEditingProject({ ...editingProject, installationType: e.target.value as InstallationType })}
                     className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                   >
-                    {masterHeads.categories.map((cat) => (
+                    {masterHeads.categories.map((cat: string) => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -755,7 +779,7 @@ export const ProjectDirectoryView: React.FC<ProjectDirectoryViewProps> = ({
                     onChange={(e) => setEditingProject({ ...editingProject, currentCondition: e.target.value as OverallCondition })}
                     className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold"
                   >
-                    {masterHeads.conditions.map((c) => (
+                    {masterHeads.conditions.map((c: any) => (
                       <option key={c.id} value={c.id}>{c.labelEn} ({c.labelUrdu})</option>
                     ))}
                   </select>

@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/user_roles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role
+        : (request.auth.token.email == 'waqas.mis@fgrf.org' ? 'super_admin' : 'viewer');
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        getUserRole() == 'super_admin' ||
+        request.auth.token.email == 'waqas.mis@fgrf.org'
+      );
+    }
+
+    function isNationalMgmt() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        getUserRole() == 'national_mgmt'
+      );
+    }
+
+    function isProvincialCoord() {
+      return isAuthenticated() && (
+        isNationalMgmt() ||
+        getUserRole() == 'provincial_coord'
+      );
+    }
+
+    function isFieldInspector() {
+      return isAuthenticated() && (
+        isProvincialCoord() ||
+        getUserRole() == 'field_inspector'
+      );
+    }
+
+    function isRepairTeam() {
+      return isAuthenticated() && (
+        isProvincialCoord() ||
+        getUserRole() == 'repair_team'
+      );
+    }
+
+    // 1. Master Configuration (Heads, Checkpoint Questions, Categories, Conditions)
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // 2. Geographical Hierarchy (Countries, Provinces, Divisions, Districts, Tehsils)
+    match /geo_hierarchy/{countryCode} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // 3. Water Projects Master Directory
+    match /water_projects/{projectId} {
+      allow read: if isAuthenticated();
+      // Super Admin and National Mgmt can create/update projects
+      allow create, update: if isAuthenticated() && (
+        isProvincialCoord() ||
+        isFieldInspector()
+      );
+      // Strict deletion: HQ Super Admin exclusively
+      allow delete: if isSuperAdmin();
+    }
+
+    // 4. Field Inspections & Audit Records
+    match /audits/{auditId} {
+      allow read: if isAuthenticated();
+      // Field inspectors and coordinators can create and submit audits
+      allow create: if isFieldInspector();
+      // Update allowed for review, approval, and edits
+      allow update: if isAuthenticated() && (
+        isProvincialCoord() ||
+        isFieldInspector()
+      );
+      // Strict deletion: HQ Super Admin exclusively
+      allow delete: if isSuperAdmin();
+    }
+
+    // 5. Corrective Action Maintenance & Repairs
+    match /repairs/{repairId} {
+      allow read: if isAuthenticated();
+      // Repair team, inspectors, and coordinators can update repair status
+      allow create, update: if isAuthenticated() && (
+        isRepairTeam() ||
+        isFieldInspector() ||
+        isProvincialCoord()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // 6. User Profiles & Jurisdictions
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Only Super Admin can manage user profiles
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // 7. Internal User Roles (UID Mapping)
+    match /user_roles/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || request.auth.uid == uid;
+    }
+
+    // 8. Tombstone Registry (Prevent Resurrection of Permanently Deleted Records)
+    match /tombstones/{entityType} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // 9. Tamper-Proof User Activity Logs (Audit Trail)
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated();
+      // Authenticated users can append to activity logs, but cannot alter or delete them
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable audit log trail
+    }
+
+    // 10. System Notifications
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+  }
+}
